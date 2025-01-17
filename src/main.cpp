@@ -21,12 +21,16 @@
 #define PID_INTERVAL_S (0.5) // 500ms
 #define PID_MIN_OUT (0)
 #define PID_MAX_OUT (100)
-struct repeating_timer motorTimer;
+struct repeating_timer motorTimer, rpmDecayTimer;
 spid_t pid;
 
 #define MAX_TARGET_RPM (1600)
 volatile uint16_t targetRPM = 0;
 volatile uint16_t measuredRPM = 0;
+volatile uint32_t lastRPMUpdateTime_us = 0;
+volatile uint32_t expectedRPMUpdateInterval_us = 0;
+#define RPM_DECAY_CHECK_INTERVAL_S (0.5)
+#define RPM_DECAY_PERCENTAGE (0.2) // 20% per loop iteration
 
 bool motorLoop(struct repeating_timer* t){
     // check if motor enable switch is on
@@ -38,6 +42,15 @@ bool motorLoop(struct repeating_timer* t){
     analogWrite(PIN_MOTOR_PWM, pwm);
     Serial.print(">PWM:");
     Serial.println(pwm);
+    return true;
+}
+
+bool rpmDecayLoop(struct repeating_timer* t){
+    uint32_t currentTime_us = time_us_32();
+    uint32_t timeSinceUpdate_us = currentTime_us - lastRPMUpdateTime_us;
+    if(timeSinceUpdate_us > expectedRPMUpdateInterval_us * 4){
+        measuredRPM *= RPM_DECAY_PERCENTAGE;
+    }
     return true;
 }
 
@@ -92,6 +105,8 @@ void gpio_callback(uint gpio, uint32_t events){
         }
         averagedRPM /= rpmMeasurementsSize;
         measuredRPM = averagedRPM;
+        lastRPMUpdateTime_us = currentTime_us;
+        expectedRPMUpdateInterval_us = averageInterval_us;
     }
 }
 
@@ -119,6 +134,10 @@ void setup()
     // add callback for pid using hardware timer
     if(!add_repeating_timer_ms(PID_INTERVAL_S * 1000, motorLoop, NULL, &motorTimer)){
         Serial.println("Failed to create motor loop timer");
+        while(1);
+    }
+    if(!add_repeating_timer_ms(RPM_DECAY_CHECK_INTERVAL_S * 1000, rpmDecayLoop, NULL, &rpmDecayTimer)){
+        Serial.println("Failed to create rpm decay loop timer");
         while(1);
     }
 }
