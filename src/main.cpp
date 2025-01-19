@@ -4,6 +4,11 @@
 #include <hardware/gpio.h>
 #include "spid.h"
 
+#include <FreeRTOS.h>
+#include <task.h>
+
+#define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
+
 #define Serial Serial1
 #define PIN_MOTOR_PWM 16
 #define PIN_HALL_SENSOR 26
@@ -11,8 +16,11 @@
 #define PIN_SWITCH_LEFT 11
 #define PIN_LED_USER 17
 
+#define TARGET_RPM_MIN_THRESHOLD (60)
+#define TARGET_RPM_FILTER_SIZE (16)
+
 // Motor speed measurement stuff
-#define PULSES_PER_REV 2
+#define PULSES_PER_REV 4
 #define RPM_AVERAGING_FILTER_SIZE 8
 
 #define K_P (0.1)
@@ -20,7 +28,7 @@
 #define K_D (0)
 #define PID_INTERVAL_S (0.5) // 500ms
 #define PID_MIN_OUT (0)
-#define PID_MAX_OUT (100)
+#define PID_MAX_OUT (255)
 struct repeating_timer motorTimer, rpmDecayTimer;
 spid_t pid;
 
@@ -146,7 +154,22 @@ void loop()
 {
     // put your main code here, to run repeatedly:
     uint16_t pot = analogRead(PIN_POTENTIOMETER);
-    targetRPM = map(pot, 0, 1023, 0, MAX_TARGET_RPM);
+    static uint16_t targetRPMFilter[TARGET_RPM_FILTER_SIZE];
+    static uint32_t targetRPMFilterNextIdx = 0;
+    targetRPMFilter[targetRPMFilterNextIdx] = map(pot, 0, 1023, 0, 1000);
+    targetRPMFilterNextIdx = (targetRPMFilterNextIdx+1) % ARRAY_SIZE(targetRPMFilter);
+    uint32_t averageTargetRPM = 0;
+    for(uint32_t i = 0; i < ARRAY_SIZE(targetRPMFilter); i++){
+        averageTargetRPM += targetRPMFilter[i];
+    }
+    averageTargetRPM /= ARRAY_SIZE(targetRPMFilter);
+    if(averageTargetRPM < TARGET_RPM_MIN_THRESHOLD){
+        targetRPM = 0;
+    }
+    else{
+        targetRPM = averageTargetRPM;
+    }
+    
     sleep_ms(100);
 
     Serial.print(">targetRPM:");
