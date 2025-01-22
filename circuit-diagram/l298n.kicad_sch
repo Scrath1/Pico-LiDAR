@@ -1,0 +1,151 @@
+(kicad_sch
+	(version 20231120)
+	(generator "eeschema")
+	(generator_version "8.0")
+	(uuid "60267593-a3f0-4819-a935-a9a1f2ee4813")
+	(paper "A4")
+	(lib_symbols)
+	(hierarchical_label "IN1"
+		(shape input)
+		(at 130.81 69.85 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "069b3196-d2ea-4961-b355-48c4052c3e4d")
+	)
+	(hierarchical_label "IN4"
+		(shape input)
+		(at 130.81 62.23 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "1d21b004-3af3-4433-a3cc-02536e6c4124")
+	)
+	(hierarchical_label "GND"
+		(shape input)
+		(at 130.81 80.01 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "38ec54ac-88fc-47c4-b9eb-7f44bf483b90")
+	)
+	(hierarchical_label "IN2"
+		(shape input)
+		(at 130.81 67.31 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "3a395272-e795-4992-83a1-c2e746d69ee8")
+	)
+	(hierarchical_label "+12V"
+		(shape input)
+		(at 130.81 82.55 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "44410a6e-0cc3-4253-832b-0c584c0055c0")
+	)
+	(hierarchical_label "IN3"
+		(shape input)
+		(at 130.81 64.77 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "5b2eaf9a-2d41-4de4-bcd6-7c6d35858aa9")
+	)
+	(hierarchical_label "OUT2"
+		(shape input)
+		(at 118.11 85.09 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "85d325e9-2936-4c6b-9c64-cd558aba5286")
+	)
+	(hierarchical_label "OUT3"
+		(shape input)
+		(at 120.65 58.42 90)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "869640cc-3dee-4398-9e7f-b9c092049868")
+	)
+	(hierarchical_label "OUT1"
+		(shape input)
+		(at 120.65 85.09 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "94749ae6-94c6-45db-abfd-9a395bbfa2d7")
+	)
+	(hierarchical_label "ENB"
+		(shape input)
+		(at 130.81 59.69 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "a74efe4a-ccd5-496b-9e46-80a476647ca0")
+	)
+	(hierarchical_label "ENA"
+		(shape input)
+		(at 130.81 72.39 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "be81ab03-725c-47f3-8800-f30d0e0865d3")
+	)
+	(hierarchical_label "OUT4"
+		(shape input)
+		(at 118.11 58.42 90)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "e208cab6-ca93-4eea-ad0c-4c96d7e0ba67")
+	)
+	(hierarchical_label "+5V"
+		(shape input)
+		(at 130.81 77.47 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "f3421d19-ff81-4673-b222-d3300038cdaa")
+	)
+)

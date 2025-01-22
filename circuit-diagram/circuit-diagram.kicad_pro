@@ -382,6 +382,23 @@
     "subpart_first_id": 65,
     "subpart_id_separator": 0
   },
-  "sheets": [],
+  "sheets": [
+    [
+      "ee723703-7836-44ec-b3c8-40935ebebf0c",
+      "Root"
+    ],
+    [
+      "a17779a1-29ab-41d1-bf94-99b1495dcac7",
+      "Pi Pico"
+    ],
+    [
+      "2c1b0aa0-6e83-47f0-9e9d-c4c4c0b8d7ba",
+      "XL6009"
+    ],
+    [
+      "26f0fa5e-1d55-48db-a72a-0b738476b038",
+      "L298N"
+    ]
+  ],
   "text_variables": {}
 }

@@ -1,0 +1,481 @@
+(kicad_sch
+	(version 20231120)
+	(generator "eeschema")
+	(generator_version "8.0")
+	(uuid "e790e195-0c4b-46fa-8a57-9298d5682465")
+	(paper "A4")
+	(lib_symbols)
+	(hierarchical_label "GP15"
+		(shape input)
+		(at 99.06 129.54 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "00111129-7f69-4f7f-a806-a650cbeca7a1")
+	)
+	(hierarchical_label "GP5"
+		(shape input)
+		(at 99.06 96.52 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "0b9d8b2c-2e4a-4628-844e-56d38f4e1cb4")
+	)
+	(hierarchical_label "GP0"
+		(shape input)
+		(at 99.06 81.28 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "194a1127-d13e-4899-91b0-3be0be710b4d")
+	)
+	(hierarchical_label "GP1"
+		(shape input)
+		(at 99.06 83.82 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "21471786-7517-46c1-8cff-9afd0ace4ade")
+	)
+	(hierarchical_label "GP26"
+		(shape input)
+		(at 114.3 104.14 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "25854891-30a0-4159-aac9-5b6662384199")
+	)
+	(hierarchical_label "VBUS"
+		(shape input)
+		(at 114.3 81.28 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "27f40aa5-d4fc-411b-8b48-21e2829b81df")
+	)
+	(hierarchical_label "GP28"
+		(shape input)
+		(at 114.3 96.52 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "31acfc82-702d-445f-991f-561ab6f87c6f")
+	)
+	(hierarchical_label "GP12"
+		(shape input)
+		(at 99.06 119.38 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "37990b6a-c5b5-4963-800a-aaf8bbefec11")
+	)
+	(hierarchical_label "GP10"
+		(shape input)
+		(at 99.06 114.3 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "3e8a400c-0d1c-4a3e-b576-addee21e29b6")
+	)
+	(hierarchical_label "GP21"
+		(shape input)
+		(at 114.3 114.3 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "3fa29605-ffbb-4a78-a83b-0d6cb2c6714b")
+	)
+	(hierarchical_label "GP6"
+		(shape input)
+		(at 99.06 101.6 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "4e275f50-6d6e-4418-9cdd-63d3d342ed61")
+	)
+	(hierarchical_label "GND"
+		(shape input)
+		(at 106.68 132.08 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "500c94e6-9166-45fd-9bb4-1be8e8bad46d")
+	)
+	(hierarchical_label "GP18"
+		(shape input)
+		(at 114.3 121.92 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "5fa7e504-f980-463d-b625-8afad6e3d7fb")
+	)
+	(hierarchical_label "GND"
+		(shape input)
+		(at 99.06 99.06 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "64a22177-469b-48cb-ab80-bcb75bc13cd5")
+	)
+	(hierarchical_label "RUN"
+		(shape input)
+		(at 114.3 106.68 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "7723f1e7-f1a2-4ef0-8949-23d5dfd7c1a2")
+	)
+	(hierarchical_label "GP22"
+		(shape input)
+		(at 114.3 109.22 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "7a41215c-4f41-4248-91ab-788547378377")
+	)
+	(hierarchical_label "GND"
+		(shape input)
+		(at 99.06 86.36 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "7bab8894-9ae6-404a-9d3e-f46724f5a2aa")
+	)
+	(hierarchical_label "GND"
+		(shape input)
+		(at 114.3 86.36 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "7cc4e65c-3ffb-4db4-9daa-f1f1bef6d4f9")
+	)
+	(hierarchical_label "GND"
+		(shape input)
+		(at 99.06 124.46 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "83c9c9ac-dd1c-42f9-bedd-d5cecae2a43d")
+	)
+	(hierarchical_label "SWDIO"
+		(shape input)
+		(at 109.22 132.08 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "8771d371-4354-4c44-aad3-22c726b7acae")
+	)
+	(hierarchical_label "GP19"
+		(shape input)
+		(at 114.3 119.38 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "87b7afbe-01a6-4a45-a5ff-d3995160d6ea")
+	)
+	(hierarchical_label "GP14"
+		(shape input)
+		(at 99.06 127 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "89ce76a1-1fbf-4d5b-a452-5a5017e8025c")
+	)
+	(hierarchical_label "GP8"
+		(shape input)
+		(at 99.06 106.68 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "8c445437-aaa6-44f6-b772-b2187a01000e")
+	)
+	(hierarchical_label "ADC_VREF"
+		(shape input)
+		(at 114.3 93.98 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "92d3bb64-3e86-4bb3-bfbc-ae3809b7c7da")
+	)
+	(hierarchical_label "GP2"
+		(shape input)
+		(at 99.06 88.9 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "95bcbb98-ba66-4ec0-a952-e3d09821426e")
+	)
+	(hierarchical_label "GP17"
+		(shape input)
+		(at 114.3 127 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "9634fb85-5701-4625-8ca6-1dffd844e413")
+	)
+	(hierarchical_label "GP4"
+		(shape input)
+		(at 99.06 93.98 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "9ceb566a-1cd1-44eb-b8b5-07a19380eb92")
+	)
+	(hierarchical_label "GP9"
+		(shape input)
+		(at 99.06 109.22 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "a18b431e-964c-41a5-8a56-a8d9e307d2e8")
+	)
+	(hierarchical_label "GP16"
+		(shape input)
+		(at 114.3 129.54 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "a42acc80-d98e-4f58-a5b6-ed46c21d3b12")
+	)
+	(hierarchical_label "GP13"
+		(shape input)
+		(at 99.06 121.92 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "a5d4ff65-3804-40c3-bfac-c5a27b1c3c7c")
+	)
+	(hierarchical_label "VSYS"
+		(shape input)
+		(at 114.3 83.82 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "ae74d18e-d9f6-4c9f-a2cb-4e57da580881")
+	)
+	(hierarchical_label "GND"
+		(shape input)
+		(at 114.3 99.06 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "afb66485-48df-404d-b29b-2669ecb564ec")
+	)
+	(hierarchical_label "GP7"
+		(shape input)
+		(at 99.06 104.14 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "b07ffb01-60ac-4165-8858-9b173998beff")
+	)
+	(hierarchical_label "GP27"
+		(shape input)
+		(at 114.3 101.6 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "b4e2cb4f-c230-4613-8f3c-0b46eb53e770")
+	)
+	(hierarchical_label "GP20"
+		(shape input)
+		(at 114.3 116.84 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "b52ce0fb-dd0f-47e5-a85f-0284386b30fe")
+	)
+	(hierarchical_label "GND"
+		(shape input)
+		(at 114.3 111.76 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "b740e762-169d-44cc-87c5-dfd8fe7bec3e")
+	)
+	(hierarchical_label "GND"
+		(shape input)
+		(at 114.3 124.46 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "c306efb4-91f9-4752-bacb-9da321cc0fd4")
+	)
+	(hierarchical_label "3V3_EN"
+		(shape input)
+		(at 114.3 88.9 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "c8583f17-b980-4b82-883a-69f8c9679c00")
+	)
+	(hierarchical_label "SWCLK"
+		(shape input)
+		(at 104.14 132.08 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "d390c73a-c457-4e7c-a1ae-16c06f5c36b8")
+	)
+	(hierarchical_label "GP11"
+		(shape input)
+		(at 99.06 116.84 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "ebcb840a-779f-4deb-a351-e5ede0fd9182")
+	)
+	(hierarchical_label "GND"
+		(shape input)
+		(at 99.06 111.76 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "f79952ed-0e0f-44cb-ae0a-3bc5c711529e")
+	)
+	(hierarchical_label "GP3"
+		(shape input)
+		(at 99.06 91.44 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "f7d470d7-ca35-44fe-9c2e-fcb1b7032363")
+	)
+	(hierarchical_label "3V3"
+		(shape input)
+		(at 114.3 91.44 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "fe7ea54e-bf83-403d-bfba-a075b5c4c454")
+	)
+)

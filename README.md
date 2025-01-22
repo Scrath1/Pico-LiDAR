@@ -13,6 +13,8 @@ and the the HC-SR04 ultrasonic sensor.
 - 7x M4x10 bolts (can be shorter)
 - 6x M3x16 countersunk bolts (can be shorter) for mounting the dome top cover
   and the base bottom plate to their respective bodies.
+- 4-6x M3x4 bolts for mounting the L298N to the base plate. There are 4 screw holes
+  but you don't really need to use them all. The remaining screws are for the XL6009.
 - ToDo: M2 bolts
 - 2x M4 nuts
   I used one with a 9mm contracted length (measured without the end rings) and a
@@ -34,6 +36,8 @@ and the the HC-SR04 ultrasonic sensor.
 - L298N DC Motor Driver module
 - Raspberry Pi Pico
 - A3144 Hall Effect Sensor or equivalent
+  Note: The A3144 is a 5V sensor but in my experience will also work
+  when powered using 3.3V.
 - VL53L0X Time-of-Flight sensor module
 - HC-SR04 Ultrasonic Sensor module
 - 6pin 2.54mm female socket connector for VL53L0X sensor
@@ -47,6 +51,11 @@ and the the HC-SR04 ultrasonic sensor.
 
 ## Assembly instruction
 ToDo
+### Required Tools
+- Soldering Iron
+- Heatgun
+- Screwdrivers
+
 ### Mounting the motor
 Depending on which DC motor you get the mounting holes on the corresponding
 3D printed bracket may not line up. In that case you will need to edit the model
