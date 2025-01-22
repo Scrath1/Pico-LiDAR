@@ -4,52 +4,44 @@
 
 #include "averaging_filter.h"
 #include "prj_config.h"
+#include "globals.h"
 
 #define QUEUE_TIMEOUT_MS (0)
 #define SIGNAL_LOCK_TIMEOUT (5)
 
+// ToDo: Remove
+#define TARGET_RPM_MIN_THRESHOLD (60)
+#define TARGET_RPM_FILTER_SIZE (16)
+
 TaskHandle_t motorSpeedMeasurementTaskHandle;
+QueueHandle_t hallSensorIntervalTimeQueue;
 
 void motorSpeedMeasurementTask(void* pvParameters) {
-    if(NULL == pvParameters) {
-        ULOG_CRITICAL("Failed to retrieve motor speed measurement task params");
-        configASSERT(false);
-    }
-    QueueHandle_t hallSensorTriggerTimeQueue =
-        ((motorSpeedMeasurementTaskParams_t*)pvParameters)->hallSensorTriggerTimeQueue;
+    (void)pvParameters;
 
-    rpm_signal_t& measuredRPMSignal = ((motorSpeedMeasurementTaskParams_t*)pvParameters)->measuredRPMSignal;
-
+    // ToDo: Remove targetRPM stuff. This is just for testing
+    AVERAGING_FILTER_DEF(targetRPMFilter, TARGET_RPM_FILTER_SIZE);
     AVERAGING_FILTER_DEF(rpmFilter, RPM_AVERAGING_FILTER_SIZE);
     averaging_filter_init(&rpmFilter);
     // IMPORTANT: The pulse times here are not related to the FreeRTOS tick counter
     // but are measured using a separate hardware timer
-    uint32_t lastPulseTime_us = 0;
+
     uint32_t lastInterval_us = 0;
     TickType_t lastWakeTime = xTaskGetTickCount();
     for(;;) {
         // indicates whether any data was received during this task loop
         bool receivedDataFlag = false;
-        // Process all pulses received since last task execution
-        uint32_t currentPulseTime_us = 0;
+        // Process all intervals received since last task execution
+        uint32_t interval_us = 0;
         while(pdTRUE ==
-              xQueueReceive(hallSensorTriggerTimeQueue, &currentPulseTime_us, pdMS_TO_TICKS(QUEUE_TIMEOUT_MS))) {
-            if(lastPulseTime_us == 0) {
-                // Initialization using the very first measured value
-                lastPulseTime_us = currentPulseTime_us;
-                continue;
-            } else {
-                // calculate interval between pulses
-                const uint32_t interval_us = currentPulseTime_us - lastPulseTime_us;
-                // from interval, determine the expected rotations per minute
-                const uint32_t rpm = (1 / ((float)interval_us / 1E6)) * 60 * PULSES_PER_REV;
-                // and add the calculated rpm to a filter
-                averaging_filter_put(&rpmFilter, rpm);
+              xQueueReceive(hallSensorIntervalTimeQueue, &interval_us, pdMS_TO_TICKS(QUEUE_TIMEOUT_MS))) {
+            // from interval, determine the expected rotations per minute
+            const uint32_t rpm = (1 / ((float)interval_us / 1E6)) * 60 * PULSES_PER_REV;
+            // and add the calculated rpm to a filter
+            averaging_filter_put(&rpmFilter, rpm);
 
-                // For the decay check
-                lastInterval_us = interval_us;
-                lastPulseTime_us = currentPulseTime_us;
-            }
+            // For the decay check
+            lastInterval_us = interval_us;
             receivedDataFlag = true;
         }
 
@@ -72,6 +64,14 @@ void motorSpeedMeasurementTask(void* pvParameters) {
             }
         }
 
+        // ToDo: Remove. This is just for testing
+        volatile uint16_t pot = analogRead(PIN_POTENTIOMETER);
+        // averaging_filter_put(&targetRPMFilter, map(pot, 0, 1023, 0, MAX_TARGET_RPM));
+        targetRPMSignal.write({.rpm = (uint32_t)map(pot, 0, 1023, 0, MAX_TARGET_RPM)}, SIGNAL_LOCK_TIMEOUT);
+        // bool ignore;
+        // Serial.print(">msmTargetRPM:");
+        // Serial.println(targetRPMSignal.read(ignore, 0).rpm);
+        // targetRPM = averaging_filter_get_avg(&targetRPMFilter);
         vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(MOTOR_SPEED_MEASUREMENT_TASK_INTERVAL_MS));
     }
 }

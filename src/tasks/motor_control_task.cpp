@@ -2,20 +2,16 @@
 
 #include <ulog.h>
 
-#include "global.h"
 #include "prj_config.h"
 #include "spid.h"
+#include "globals.h"
 
 #define SIGNAL_LOCK_TIMEOUT (10)
 
 TaskHandle_t motorCtrlTaskHandle;
 
 void motorControlTask(void* pvParameters) {
-    if(NULL == pvParameters){
-        ULOG_CRITICAL("Failed to retrieve motor control task params");
-        assert(false);
-    }
-    rpm_signal_t& measuredRPMSignal = ((motorControlTaskParams_t*)pvParameters)->measuredRPMSignal;
+    (void)pvParameters;
 
     // Initialize PID controller
     spid_t pid;
@@ -29,20 +25,24 @@ void motorControlTask(void* pvParameters) {
         // check if motor enable switch is on
         uint8_t pwm = 0;
         rpm_data_t measuredRPM = {.rpm = 0};
+        rpm_data_t targetRPM = {.rpm = 0};
         if(digitalRead(PIN_SWITCH_LEFT)) {
-            bool success = false;
-            measuredRPM = measuredRPMSignal.read(success, SIGNAL_LOCK_TIMEOUT);
-            pwm = (uint8_t)spid_process(&pid, (float)targetRPM, measuredRPM.rpm);
+            bool measuredRPMSuccess = false;
+            measuredRPM = measuredRPMSignal.read(measuredRPMSuccess, SIGNAL_LOCK_TIMEOUT);
+            bool targetRPMSuccess = false;
+            targetRPM = targetRPMSignal.read(targetRPMSuccess, SIGNAL_LOCK_TIMEOUT);
+            if(measuredRPMSuccess && targetRPMSuccess){
+                pwm = (uint8_t)spid_process(&pid, (float)targetRPM.rpm, measuredRPM.rpm);
+            }
         }
         // PWM_instance.setPWM(PIN_MOTOR_PWM, pwm_frequency, pwm);
         analogWrite(PIN_MOTOR_PWM, pwm);
-        Serial.print(">measuredRPM:");
-        Serial.println(measuredRPM.rpm);
+        // Serial.print(">measuredRPM:");
+        // Serial.println(measuredRPM.rpm);
         Serial.print(">targetRPM:");
-        Serial.println(targetRPM);
-        Serial.print(">PWM:");
-        Serial.println(pwm);
-        
+        Serial.println(targetRPM.rpm);
+        // Serial.print(">PWM:");
+        // Serial.println(pwm);
 
         // Preempt task until next loop iteration time
         xTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(PID_INTERVAL_MS));

@@ -15,12 +15,8 @@
     #error "Motor control task priority too high"
 #endif
 
-typedef struct {
-    rpm_signal_t& measuredRPMSignal;
-    QueueHandle_t hallSensorTriggerTimeQueue;
-} motorSpeedMeasurementTaskParams_t;
-
 extern TaskHandle_t motorSpeedMeasurementTaskHandle;
+extern QueueHandle_t hallSensorIntervalTimeQueue;
 void motorSpeedMeasurementTask(void* pvParameters);
 
 #endif // MOTOR_SPEED_MEASUREMENT_TASK_H

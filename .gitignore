@@ -7,3 +7,4 @@
 .vscode/
 
 circuit-diagram/circuit-diagram-backups/
+*.map

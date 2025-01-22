@@ -1,6 +1,7 @@
 #ifndef SIGNAL_H
 #define SIGNAL_H
 
+#include <FreeRTOS.h>
 #include <task.h>
 
 #include <cstdint>
@@ -12,7 +13,9 @@ template <typename T>
 struct signal {
     uint32_t updateTimestamp_ms;
     T data;
+#ifdef SIGNAL_USE_MUTEX
     SemaphoreHandle_t mutex;
+#endif // SIGNAL_USE_MUTEX
 
     bool init() {
 #ifdef SIGNAL_USE_MUTEX

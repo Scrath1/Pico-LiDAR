@@ -43,7 +43,7 @@
 // the current rotation speed. Pulses are still being recorded without the task
 // being active. This also determines how often the age of the last pulse
 // is checked to determine whether the motor has stalled
-#define MOTOR_SPEED_MEASUREMENT_TASK_INTERVAL_MS (50)
+#define MOTOR_SPEED_MEASUREMENT_TASK_INTERVAL_MS (PID_INTERVAL_MS)
 // How many percent of the RPM measurement get lost with each
 // decay interval
 #define RPM_DECAY_PERCENTAGE (0.2) // 20% per loop iteration
