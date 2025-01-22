@@ -14,6 +14,11 @@
     #error "Motor control task priority too high"
 #endif
 
+typedef struct {
+    rpm_signal_t& targetRPMSignal;
+    rpm_signal_t& measuredRPMSignal;
+} motorControlTaskParams_t;
+
 extern TaskHandle_t motorCtrlTaskHandle;
 void motorControlTask(void* pvParameters);
 

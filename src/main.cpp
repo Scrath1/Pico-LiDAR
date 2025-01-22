@@ -14,7 +14,14 @@
 #include "tasks/motor_control_task.h"
 #include "tasks/motor_speed_measurement_task.h"
 #include "averaging_filter.h"
-#include "globals.h"
+
+#define SIGNAL_LOCK_TIMEOUT 50
+#define TARGET_RPM_MIN_THRESHOLD (60)
+#define TARGET_RPM_FILTER_SIZE (16)
+AVERAGING_FILTER_DEF(targetRPMFilter, TARGET_RPM_FILTER_SIZE);
+
+QueueHandle_t hallSensorIntervalTimeQueue;
+rpm_signal_t targetRPMSignal, measuredRPMSignal;
 
 void consoleLogger(ulog_level_t severity, char* msg) {
     char fmsg[256];
@@ -87,27 +94,41 @@ void setup() {
     targetRPMSignal.write({.rpm = 0}, 0);
 
     // create tasks
+    motorControlTaskParams_t mCtrlTaskParams = {
+        .targetRPMSignal = targetRPMSignal,
+        .measuredRPMSignal = measuredRPMSignal
+    };
+
     if(pdPASS != xTaskCreate(motorControlTask, MOTOR_CONTROL_TASK_NAME, MOTOR_CONTROL_TASK_STACK_SIZE,
-                             NULL, MOTOR_CONTROL_TASK_PRIORITY, &motorCtrlTaskHandle)) {
+                             (void*)&mCtrlTaskParams, MOTOR_CONTROL_TASK_PRIORITY, &motorCtrlTaskHandle)) {
         ULOG_CRITICAL("Failed to create motor control task");
         assert(false);
     }
+    motorSpeedMeasurementTaskParams_t mSpdMeasParams = {
+        .targetRPMSignal = targetRPMSignal,
+        .measuredRPMSignal = measuredRPMSignal,
+        .hallSensorIntervalTimeQueue = hallSensorIntervalTimeQueue
+    };
+
     if(pdPASS != xTaskCreate(motorSpeedMeasurementTask, MOTOR_SPEED_MEASUREMENT_TASK_NAME,
-                             MOTOR_SPEED_MEASUREMENT_TASK_STACK_SIZE, NULL,
+                             MOTOR_SPEED_MEASUREMENT_TASK_STACK_SIZE, (void*)&mSpdMeasParams,
                              MOTOR_SPEED_MEASUREMENT_TASK_PRIORITY, &motorSpeedMeasurementTaskHandle)) {
         ULOG_CRITICAL("Failed to create motor speed measurement task");
         assert(false);
     }
 
-    vTaskDelete(NULL);
+    // vTaskDelete(NULL);
     // taskYIELD();
-    // averaging_filter_init(&targetRPMFilter);
+    averaging_filter_init(&targetRPMFilter);
     // This is done in the background by the arduino-pico core already
     // vTaskStartScheduler();
 }
 
-
-
 void loop() {
-    // This function isn't being executed because the task running it was deleted
+    // ToDo: Remove after testing
+    volatile uint16_t pot = analogRead(PIN_POTENTIOMETER);
+    averaging_filter_put(&targetRPMFilter, map(pot, 0, 1023, 0, MAX_TARGET_RPM));
+    uint32_t targetRPM = averaging_filter_get_avg(&targetRPMFilter);
+    targetRPMSignal.write({.rpm = targetRPM}, SIGNAL_LOCK_TIMEOUT);
+    vTaskDelay(100);
 }

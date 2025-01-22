@@ -4,23 +4,25 @@
 
 #include "averaging_filter.h"
 #include "prj_config.h"
-#include "globals.h"
 
 #define QUEUE_TIMEOUT_MS (0)
 #define SIGNAL_LOCK_TIMEOUT (5)
 
-// ToDo: Remove
-#define TARGET_RPM_MIN_THRESHOLD (60)
-#define TARGET_RPM_FILTER_SIZE (16)
-
 TaskHandle_t motorSpeedMeasurementTaskHandle;
-QueueHandle_t hallSensorIntervalTimeQueue;
 
 void motorSpeedMeasurementTask(void* pvParameters) {
-    (void)pvParameters;
+    if(NULL == pvParameters) {
+        ULOG_CRITICAL("Failed to retrieve motor speed measurement task params");
+        configASSERT(false);
+    }
+    QueueHandle_t hallSensorIntervalTimeQueue =
+        ((motorSpeedMeasurementTaskParams_t*)pvParameters)->hallSensorIntervalTimeQueue;
+
+    rpm_signal_t& measuredRPMSignal = ((motorSpeedMeasurementTaskParams_t*)pvParameters)->measuredRPMSignal;
+    rpm_signal_t& targetRPMSignal = ((motorSpeedMeasurementTaskParams_t*)pvParameters)->targetRPMSignal;
 
     // ToDo: Remove targetRPM stuff. This is just for testing
-    AVERAGING_FILTER_DEF(targetRPMFilter, TARGET_RPM_FILTER_SIZE);
+    
     AVERAGING_FILTER_DEF(rpmFilter, RPM_AVERAGING_FILTER_SIZE);
     averaging_filter_init(&rpmFilter);
     // IMPORTANT: The pulse times here are not related to the FreeRTOS tick counter
@@ -64,14 +66,6 @@ void motorSpeedMeasurementTask(void* pvParameters) {
             }
         }
 
-        // ToDo: Remove. This is just for testing
-        volatile uint16_t pot = analogRead(PIN_POTENTIOMETER);
-        // averaging_filter_put(&targetRPMFilter, map(pot, 0, 1023, 0, MAX_TARGET_RPM));
-        targetRPMSignal.write({.rpm = (uint32_t)map(pot, 0, 1023, 0, MAX_TARGET_RPM)}, SIGNAL_LOCK_TIMEOUT);
-        // bool ignore;
-        // Serial.print(">msmTargetRPM:");
-        // Serial.println(targetRPMSignal.read(ignore, 0).rpm);
-        // targetRPM = averaging_filter_get_avg(&targetRPMFilter);
         vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(MOTOR_SPEED_MEASUREMENT_TASK_INTERVAL_MS));
     }
 }
