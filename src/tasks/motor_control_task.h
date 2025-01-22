@@ -4,14 +4,19 @@
 #include <Arduino.h>
 #include <FreeRTOS.h>
 #include <task.h>
+#include "signals/signal_types.h"
 
-#define MOTOR_CONTROL_TASK_STACK_SIZE (configMINIMAL_STACK_SIZE)
-#define MOTOR_CONTROL_TASK_NAME ("motorCtrlTask")
+#define MOTOR_CONTROL_TASK_STACK_SIZE (1024)
+#define MOTOR_CONTROL_TASK_NAME ("mtrCtrlTsk")
 #define MOTOR_CONTROL_TASK_PRIORITY (configMAX_PRIORITIES-3)
 
 #if (MOTOR_CONTROL_TASK_PRIORITY >= configMAX_PRIORITIES)
     #error "Motor control task priority too high"
 #endif
+
+typedef struct {
+    rpm_signal_t& measuredRPMSignal;
+} motorControlTaskParams_t;
 
 extern TaskHandle_t motorCtrlTaskHandle;
 void motorControlTask(void* pvParameters);

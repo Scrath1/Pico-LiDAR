@@ -8,6 +8,8 @@
 #define PIN_POTENTIOMETER 27
 #define PIN_SWITCH_LEFT 11
 #define PIN_LED_USER 17
+#define LED_ON (0)
+#define LED_OFF (1)
 
 // COMMUNICATION
 // ==============================================================
@@ -36,11 +38,20 @@
 #define PULSES_PER_REV 4
 // Filter size for averaging of measured RPM
 #define RPM_AVERAGING_FILTER_SIZE 8
-// Interval with which the recentness of the RPM measurement is checked.
-// If the measurement gets too old, begin decaying the RPM value
-#define RPM_DECAY_CHECK_INTERVAL_S (0.5)
+// Determines the interval with which the motor speed measurement task
+// calculates the measured intervals between magnetic pulses to determine
+// the current rotation speed. Pulses are still being recorded without the task
+// being active. This also determines how often the age of the last pulse
+// is checked to determine whether the motor has stalled
+#define MOTOR_SPEED_MEASUREMENT_TASK_INTERVAL_MS (50)
 // How many percent of the RPM measurement get lost with each
 // decay interval
 #define RPM_DECAY_PERCENTAGE (0.2) // 20% per loop iteration
+
+// TASK COMMUNICATION
+// ==============================================================
+// Size of the queue for sending the trigger times of the hall effect sensor
+// to the speed measuring task
+#define HALL_TRIGGER_TIME_QUEUE_LEN (4096)
 
 #endif // PRJ_CONFIG_H
