@@ -4,6 +4,7 @@
 
 #include "prj_config.h"
 #include "spid.h"
+#include <hardware/pwm.h>
 
 #define SIGNAL_LOCK_TIMEOUT (10)
 
@@ -42,6 +43,10 @@ void motorControlTask(void* pvParameters) {
         ULOG_CRITICAL("Failed to initialize PID controller");
         configASSERT(false);
     }
+
+    // get channel and slice number of the PWM slice used for the motor pin
+    const uint8_t pwmChannelNum = pwm_gpio_to_channel(PIN_MOTOR_PWM);
+    const uint8_t pwmSliceNum = pwm_gpio_to_slice_num(PIN_MOTOR_PWM);
 
     TickType_t lastWakeTime = xTaskGetTickCount();
     ULOG_TRACE("Starting motor control task loop");
@@ -83,9 +88,8 @@ void motorControlTask(void* pvParameters) {
         if(digitalRead(PIN_SWITCH_LEFT) && measuredRPMSuccess && targetRPMSuccess) {
             pwm = (uint8_t)spid_process(&pid, (float)targetRPM.rpm, measuredRPM.rpm);
         }
-        // ToDo: Switch to Hardware based PWM
-        // PWM_instance.setPWM(PIN_MOTOR_PWM, pwm_frequency, pwm);
-        analogWrite(PIN_MOTOR_PWM, pwm);
+        pwm_set_chan_level(pwmSliceNum, pwmChannelNum, pwm);
+
         Serial.print(">measuredRPM:");
         Serial.println(measuredRPM.rpm);
         Serial.print(">targetRPM:");

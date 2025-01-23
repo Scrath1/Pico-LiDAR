@@ -18,7 +18,7 @@
 // MOTOR CONTROL CONFIGURATIONS
 // ==============================================================
 // Maximum target speed for the motor
-#define MAX_TARGET_RPM (1600)
+#define MAX_TARGET_RPM (1000)
 // PID control P constant
 #define K_P (0.1)
 // PID control I constant
