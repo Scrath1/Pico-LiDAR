@@ -5,7 +5,7 @@
 #define MIN_LOOP_INTERVAL_S (0.00001)
 
 spid_err_t spid_init(spid_t* ctrl, float p, float i, float d, float min, float max, float interval_s) {
-    if(ctrl == NULL) return SPID_SUCCESS;
+    if(ctrl == NULL) return SPID_NULLPTR;
     if(p < 0 || i < 0 || d < 0 || interval_s < 0) {
         return SPID_INVALID_PARAMETER;
     }
@@ -27,6 +27,24 @@ spid_err_t spid_init(spid_t* ctrl, float p, float i, float d, float min, float m
     ctrl->_err_prev = 0;
     ctrl->_integral_sum = 0;
 
+    return SPID_SUCCESS;
+}
+
+spid_err_t spid_set_kp(spid_t* ctrl, float p){
+    if(ctrl == NULL) return SPID_NULLPTR;
+    ctrl->k_p = p;
+    return SPID_SUCCESS;
+}
+
+spid_err_t spid_set_ki(spid_t* ctrl, float i){
+    if(ctrl == NULL) return SPID_NULLPTR;
+    ctrl->k_i = i;
+    return SPID_SUCCESS;
+}
+
+spid_err_t spid_set_kd(spid_t* ctrl, float d){
+    if(ctrl == NULL) return SPID_NULLPTR;
+    ctrl->k_d = d;
     return SPID_SUCCESS;
 }
 

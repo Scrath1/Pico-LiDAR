@@ -49,6 +49,26 @@ spid_err_t spid_init(spid_t* ctrl, float p, float i, float d, float min, float m
  */
 float spid_process(spid_t* ctrl, float target, float measured);
 
+/**
+ * @brief Updates the k_p gain constant
+ * @return SPID_SUCCESS
+ * @return SPID_NULLPTR if ctrl is NULL
+ */
+spid_err_t spid_set_kp(spid_t* ctrl, float p);
+
+/**
+ * @brief Updates the k_i gain constant
+ * @return SPID_SUCCESS
+ * @return SPID_NULLPTR if ctrl is NULL
+ */
+spid_err_t spid_set_ki(spid_t* ctrl, float i);
+
+/**
+ * @brief Updates the k_d gain constant
+ * @return SPID_SUCCESS
+ * @return SPID_NULLPTR if ctrl is NULL
+ */
+spid_err_t spid_set_kd(spid_t* ctrl, float d);
 #ifdef __cplusplus
 }
 #endif

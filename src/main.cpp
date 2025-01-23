@@ -24,6 +24,7 @@ AVERAGING_FILTER_DEF(measuredRPMFilter, RPM_AVERAGING_FILTER_SIZE);
 AVERAGING_FILTER_DEF(targetRPMFilter, TARGET_RPM_FILTER_SIZE);
 
 rpm_signal_t targetRPMSignal, measuredRPMSignal;
+runtime_settings_signal_t rtSettingsSignal;
 
 void consoleLogger(ulog_level_t severity, char* msg) {
     char fmsg[256];
@@ -129,12 +130,21 @@ void setup() {
     measuredRPMSignal.write({.rpm = 0}, 0);
     targetRPMSignal.init();
     targetRPMSignal.write({.rpm = 0}, 0);
+    rtSettingsSignal.init();
+    rtSettingsSignal.write({
+        .pid_controller = {
+            .kp = K_P,
+            .ki = K_I,
+            .kd = K_D
+        }
+    }, 0);
 
     // create tasks
     ULOG_TRACE("Creating tasks");
     motorControlTaskParams_t mCtrlTaskParams = {
         .targetRPMSignal = targetRPMSignal,
-        .measuredRPMSignal = measuredRPMSignal
+        .measuredRPMSignal = measuredRPMSignal,
+        .runtimeSettingsSignal = rtSettingsSignal
     };
     if(pdPASS != xTaskCreate(motorControlTask, MOTOR_CONTROL_TASK_NAME, MOTOR_CONTROL_TASK_STACK_SIZE,
                              (void*)&mCtrlTaskParams, MOTOR_CONTROL_TASK_PRIORITY, &motorCtrlTaskHandle)) {

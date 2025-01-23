@@ -5,6 +5,7 @@
 #include <FreeRTOS.h>
 #include <task.h>
 #include "signals/signal_types.h"
+#include "runtime_settings.h"
 
 #define MOTOR_CONTROL_TASK_STACK_SIZE (1024)
 #define MOTOR_CONTROL_TASK_NAME ("mtrCtrlTsk")
@@ -17,6 +18,7 @@
 typedef struct {
     rpm_signal_t& targetRPMSignal;
     rpm_signal_t& measuredRPMSignal;
+    runtime_settings_signal_t& runtimeSettingsSignal;
 } motorControlTaskParams_t;
 
 extern TaskHandle_t motorCtrlTaskHandle;

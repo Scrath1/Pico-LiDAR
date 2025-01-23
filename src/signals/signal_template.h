@@ -125,5 +125,13 @@ struct signal {
         }
         return out;
     }
+
+    uint32_t getLastUpdateTime_ms(){
+        return this->updateTimestamp_ms;
+    }
+
+    uint32_t getAge_ms(){
+        return xTaskGetTickCount() - this->updateTimestamp_ms;
+    }
 };
 #endif  // SIGNAL_H
