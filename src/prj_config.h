@@ -38,20 +38,12 @@
 #define PULSES_PER_REV 4
 // Filter size for averaging of measured RPM
 #define RPM_AVERAGING_FILTER_SIZE 8
-// Determines the interval with which the motor speed measurement task
-// calculates the measured intervals between magnetic pulses to determine
-// the current rotation speed. Pulses are still being recorded without the task
-// being active. This also determines how often the age of the last pulse
-// is checked to determine whether the motor has stalled
-#define MOTOR_SPEED_MEASUREMENT_TASK_INTERVAL_MS (PID_INTERVAL_MS)
-// How many percent of the RPM measurement get lost with each
-// decay interval
-#define RPM_DECAY_PERCENTAGE (0.2) // 20% per loop iteration
 
-// TASK COMMUNICATION
+// SIGNAL AGE
 // ==============================================================
-// Size of the queue for sending the trigger times of the hall effect sensor
-// to the speed measuring task
-#define HALL_TRIGGER_TIME_QUEUE_LEN (4096)
+// How often the task checking the age of signals is executed
+#define SIGNAL_AGE_CHECK_INTERVAL_MS (25)
+// How old the measuredRPM signal is allowed to be before it is invalidated
+#define SIGNAL_MEASURED_RPM_AGE_THRESHOLD_MS (PID_INTERVAL_MS / PULSES_PER_REV * 2)
 
 #endif // PRJ_CONFIG_H

@@ -12,6 +12,7 @@
 #include "signals/signal_types.h"
 #include "spid.h"
 #include "tasks/motor_control_task.h"
+#include "tasks/signal_age_check_task.h"
 #include "averaging_filter.h"
 
 #define SIGNAL_LOCK_TIMEOUT 50
@@ -122,13 +123,6 @@ void setup() {
     gpio_set_dir(PIN_HALL_SENSOR, GPIO_IN);
     gpio_set_irq_enabled_with_callback(PIN_HALL_SENSOR, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, gpio_callback);
 
-    // Used to send the trigger time (in us) from the gpio interrupt to the
-    // motor speed measurement task. Data type is uint32_t.
-    // hallSensorIntervalTimeQueue = xQueueCreate(HALL_TRIGGER_TIME_QUEUE_LEN, sizeof(uint32_t));
-    // if(NULL == hallSensorIntervalTimeQueue) {
-    //     ULOG_CRITICAL("Failed to create hallSensorIntervalTimeQueue");
-    //     configASSERT(false);
-    // }
     // signals for communicating measured RPM and target RPM between tasks
     ULOG_TRACE("Initializing communication signals");
     measuredRPMSignal.init();
@@ -148,18 +142,16 @@ void setup() {
         assert(false);
     }
     vTaskCoreAffinitySet(motorCtrlTaskHandle, (1<<0));
-    // motorSpeedMeasurementTaskParams_t mSpdMeasParams = {
-    //     .targetRPMSignal = targetRPMSignal,
-    //     .measuredRPMSignal = measuredRPMSignal,
-    //     .hallSensorIntervalTimeQueue = hallSensorIntervalTimeQueue
-    // };
-
-    // if(pdPASS != xTaskCreate(motorSpeedMeasurementTask, MOTOR_SPEED_MEASUREMENT_TASK_NAME,
-    //                          MOTOR_SPEED_MEASUREMENT_TASK_STACK_SIZE, (void*)&mSpdMeasParams,
-    //                          MOTOR_SPEED_MEASUREMENT_TASK_PRIORITY, &motorSpeedMeasurementTaskHandle)) {
-    //     ULOG_CRITICAL("Failed to create motor speed measurement task");
-    //     assert(false);
-    // }
+    signalAgeCheckTaskParams_t sigAgeChkTskParams = {
+        .measuredRPMSignal = measuredRPMSignal
+    };
+    if(pdPASS != xTaskCreate(signalAgeCheckTask, SIGNAL_AGE_CHECK_TASK_NAME,
+                             SIGNAL_AGE_CHECK_TASK_STACK_SIZE, (void*)&sigAgeChkTskParams,
+                             SIGNAL_AGE_CHECK_TASK_PRIORITY, &signalAgeCheckTaskHandle)) {
+        ULOG_CRITICAL("Failed to create signal age check task");
+        assert(false);
+    }
+    vTaskCoreAffinitySet(signalAgeCheckTaskHandle, (1<<0));
 
     // vTaskDelete(NULL);
     // taskYIELD();

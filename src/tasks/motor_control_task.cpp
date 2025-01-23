@@ -40,9 +40,8 @@ void motorControlTask(void* pvParameters) {
         uint32_t measuredRPMAge_ms;
         measuredRPM = measuredRPMSignal.read(measuredRPMSuccess, SIGNAL_LOCK_TIMEOUT, measuredRPMAge_ms);
         if(measuredRPMAge_ms > PID_INTERVAL_MS){
-            // if signal is too old, invalidate measurements
-            measuredRPMSignal.write({.rpm = 0}, SIGNAL_LOCK_TIMEOUT);
-            measuredRPM.rpm = 0;
+            // if signal is too old, set targetRPM to 0 for safe state
+            targetRPM.rpm = 0;
         }
 
         if(digitalRead(PIN_SWITCH_LEFT) && measuredRPMSuccess && targetRPMSuccess) {
