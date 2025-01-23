@@ -12,15 +12,16 @@
 #include "signals/signal_types.h"
 #include "spid.h"
 #include "tasks/motor_control_task.h"
-#include "tasks/motor_speed_measurement_task.h"
 #include "averaging_filter.h"
 
 #define SIGNAL_LOCK_TIMEOUT 50
 #define TARGET_RPM_MIN_THRESHOLD (60)
 #define TARGET_RPM_FILTER_SIZE (16)
+
+AVERAGING_FILTER_DEF(hallIntervalFilter, 4);
+AVERAGING_FILTER_DEF(measuredRPMFilter, RPM_AVERAGING_FILTER_SIZE);
 AVERAGING_FILTER_DEF(targetRPMFilter, TARGET_RPM_FILTER_SIZE);
 
-QueueHandle_t hallSensorIntervalTimeQueue;
 rpm_signal_t targetRPMSignal, measuredRPMSignal;
 
 void consoleLogger(ulog_level_t severity, char* msg) {
@@ -30,28 +31,64 @@ void consoleLogger(ulog_level_t severity, char* msg) {
     Serial.print(fmsg);
 }
 
+void hallSensorISR(uint32_t events, BaseType_t& xHigherPriorityTaskWoken){
+    if(events & GPIO_IRQ_EDGE_RISE){
+        // signal detection visualization using LED
+        digitalWrite(PIN_LED_USER, LED_OFF);
+    }
+    else if(events & GPIO_IRQ_EDGE_FALL){
+        static uint32_t lastPulseTime_us = 0;
+        static uint32_t pulseIntervals[PULSES_PER_REV] = {0};
+        const uint32_t pulseIntervalsArrSize = sizeof(pulseIntervals)/sizeof(pulseIntervals[0]);
+        // points to next index to write to
+        static uint32_t pulseIntervalsNextIdx = 0;
+
+        // signal detection using LED
+        digitalWrite(PIN_LED_USER, 0);
+
+        // initialize variable before measuring
+        if(lastPulseTime_us == 0){
+            lastPulseTime_us = time_us_32();
+            return;
+        }
+        // calculate time between the last 2 magnetic pulses
+        const uint32_t currentTime_us = time_us_32();
+        const uint32_t interval_us = currentTime_us - lastPulseTime_us;
+        lastPulseTime_us = currentTime_us;
+
+        // add it to array of pulse times for averaging
+        averaging_filter_put(&hallIntervalFilter, interval_us);
+        uint32_t averageInterval_us = averaging_filter_get_avg(&hallIntervalFilter);
+
+        // calculate actual axle rotation speed
+        // Note: For some reason trying to replace this manual filtering
+        // with the averaging filter used above results in extreme spikes in measurements
+        // ToDo: Find reason and fix
+        static uint32_t rpmMeasurements[RPM_AVERAGING_FILTER_SIZE];
+        static const uint32_t rpmMeasurementsSize = sizeof(rpmMeasurements)/sizeof(rpmMeasurements[0]);
+        static uint32_t rpmMeasurementsNextIdx = 0;
+        uint32_t currentRPMMeasurement = (1/((float)averageInterval_us / 1E6)) * 60 * PULSES_PER_REV;
+        rpmMeasurements[rpmMeasurementsNextIdx] = currentRPMMeasurement;
+        rpmMeasurementsNextIdx = (rpmMeasurementsNextIdx+1) % rpmMeasurementsNextIdx;
+
+        uint32_t avgRPM = 0;
+        for(uint32_t i = 0; i < rpmMeasurementsSize; i++){
+            avgRPM += rpmMeasurements[i];
+        }
+        avgRPM /= rpmMeasurementsSize;
+
+        // and finally update the signal for the measured RPM
+        if(!measuredRPMSignal.writeFromISR({.rpm = avgRPM}, &xHigherPriorityTaskWoken)){
+            // retry once on failure
+            measuredRPMSignal.writeFromISR({.rpm = avgRPM}, &xHigherPriorityTaskWoken);
+        }
+    }
+}
+
 void gpio_callback(uint gpio, uint32_t events) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    if(gpio == PIN_HALL_SENSOR && events & GPIO_IRQ_EDGE_RISE) {
-        // signal detection using LED
-        digitalWrite(PIN_LED_USER, LED_OFF);
-    } else if(gpio == PIN_HALL_SENSOR && events & GPIO_IRQ_EDGE_FALL) {
-        if(NULL != hallSensorIntervalTimeQueue){
-            static uint32_t lastTriggerTime_us = 0;
-            if(lastTriggerTime_us == 0){
-                lastTriggerTime_us = time_us_32();
-                return;
-            }
-            else{
-                uint32_t currentTime_us = time_us_32();
-                uint32_t interval_us = currentTime_us - lastTriggerTime_us;
-                xQueueSendFromISR(hallSensorIntervalTimeQueue, &interval_us, &xHigherPriorityTaskWoken);
-                digitalWrite(PIN_LED_USER, LED_ON);
-                lastTriggerTime_us = currentTime_us;
-            }
-        }
+    if(gpio == PIN_HALL_SENSOR) hallSensorISR(events, xHigherPriorityTaskWoken);
 
-    }
     if(xHigherPriorityTaskWoken){
         portYIELD_FROM_ISR(pdTRUE);
     }
@@ -69,7 +106,12 @@ void setup() {
     Serial.setRX(1);
     Serial.begin(115200);
 
+    averaging_filter_init(&hallIntervalFilter);
+    averaging_filter_init(&measuredRPMFilter);
+    averaging_filter_init(&targetRPMFilter);
+
     // Pin configuration
+    ULOG_TRACE("Configuring pins");
     pinMode(PIN_MOTOR_PWM, OUTPUT);
     pinMode(PIN_POTENTIOMETER, INPUT);
     pinMode(PIN_SWITCH_LEFT, INPUT);
@@ -82,46 +124,48 @@ void setup() {
 
     // Used to send the trigger time (in us) from the gpio interrupt to the
     // motor speed measurement task. Data type is uint32_t.
-    hallSensorIntervalTimeQueue = xQueueCreate(HALL_TRIGGER_TIME_QUEUE_LEN, sizeof(uint32_t));
-    if(NULL == hallSensorIntervalTimeQueue) {
-        ULOG_CRITICAL("Failed to create hallSensorIntervalTimeQueue");
-        configASSERT(false);
-    }
+    // hallSensorIntervalTimeQueue = xQueueCreate(HALL_TRIGGER_TIME_QUEUE_LEN, sizeof(uint32_t));
+    // if(NULL == hallSensorIntervalTimeQueue) {
+    //     ULOG_CRITICAL("Failed to create hallSensorIntervalTimeQueue");
+    //     configASSERT(false);
+    // }
     // signals for communicating measured RPM and target RPM between tasks
+    ULOG_TRACE("Initializing communication signals");
     measuredRPMSignal.init();
     measuredRPMSignal.write({.rpm = 0}, 0);
     targetRPMSignal.init();
     targetRPMSignal.write({.rpm = 0}, 0);
 
     // create tasks
+    ULOG_TRACE("Creating tasks");
     motorControlTaskParams_t mCtrlTaskParams = {
         .targetRPMSignal = targetRPMSignal,
         .measuredRPMSignal = measuredRPMSignal
     };
-
     if(pdPASS != xTaskCreate(motorControlTask, MOTOR_CONTROL_TASK_NAME, MOTOR_CONTROL_TASK_STACK_SIZE,
                              (void*)&mCtrlTaskParams, MOTOR_CONTROL_TASK_PRIORITY, &motorCtrlTaskHandle)) {
         ULOG_CRITICAL("Failed to create motor control task");
         assert(false);
     }
-    motorSpeedMeasurementTaskParams_t mSpdMeasParams = {
-        .targetRPMSignal = targetRPMSignal,
-        .measuredRPMSignal = measuredRPMSignal,
-        .hallSensorIntervalTimeQueue = hallSensorIntervalTimeQueue
-    };
+    vTaskCoreAffinitySet(motorCtrlTaskHandle, (1<<0));
+    // motorSpeedMeasurementTaskParams_t mSpdMeasParams = {
+    //     .targetRPMSignal = targetRPMSignal,
+    //     .measuredRPMSignal = measuredRPMSignal,
+    //     .hallSensorIntervalTimeQueue = hallSensorIntervalTimeQueue
+    // };
 
-    if(pdPASS != xTaskCreate(motorSpeedMeasurementTask, MOTOR_SPEED_MEASUREMENT_TASK_NAME,
-                             MOTOR_SPEED_MEASUREMENT_TASK_STACK_SIZE, (void*)&mSpdMeasParams,
-                             MOTOR_SPEED_MEASUREMENT_TASK_PRIORITY, &motorSpeedMeasurementTaskHandle)) {
-        ULOG_CRITICAL("Failed to create motor speed measurement task");
-        assert(false);
-    }
+    // if(pdPASS != xTaskCreate(motorSpeedMeasurementTask, MOTOR_SPEED_MEASUREMENT_TASK_NAME,
+    //                          MOTOR_SPEED_MEASUREMENT_TASK_STACK_SIZE, (void*)&mSpdMeasParams,
+    //                          MOTOR_SPEED_MEASUREMENT_TASK_PRIORITY, &motorSpeedMeasurementTaskHandle)) {
+    //     ULOG_CRITICAL("Failed to create motor speed measurement task");
+    //     assert(false);
+    // }
 
     // vTaskDelete(NULL);
     // taskYIELD();
-    averaging_filter_init(&targetRPMFilter);
     // This is done in the background by the arduino-pico core already
     // vTaskStartScheduler();
+    ULOG_TRACE("Setup finished");
 }
 
 void loop() {

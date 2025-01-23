@@ -10,6 +10,7 @@
 TaskHandle_t motorCtrlTaskHandle;
 
 void motorControlTask(void* pvParameters) {
+    ULOG_TRACE("Starting motor control task");
     if(NULL == pvParameters){
         ULOG_CRITICAL("Failed to retrieve motor control task params");
         assert(false);
@@ -25,6 +26,7 @@ void motorControlTask(void* pvParameters) {
     }
 
     TickType_t lastWakeTime = xTaskGetTickCount();
+    ULOG_TRACE("Starting motor control task loop");
     for(;;) {
         // check if motor enable switch is on
         uint8_t pwm = 0;
@@ -35,7 +37,13 @@ void motorControlTask(void* pvParameters) {
         bool targetRPMSuccess = false;
         targetRPM = targetRPMSignal.read(targetRPMSuccess, SIGNAL_LOCK_TIMEOUT);
         bool measuredRPMSuccess = false;
-        measuredRPM = measuredRPMSignal.read(measuredRPMSuccess, SIGNAL_LOCK_TIMEOUT);
+        uint32_t measuredRPMAge_ms;
+        measuredRPM = measuredRPMSignal.read(measuredRPMSuccess, SIGNAL_LOCK_TIMEOUT, measuredRPMAge_ms);
+        if(measuredRPMAge_ms > PID_INTERVAL_MS){
+            // if signal is too old, invalidate measurements
+            measuredRPMSignal.write({.rpm = 0}, SIGNAL_LOCK_TIMEOUT);
+            measuredRPM.rpm = 0;
+        }
 
         if(digitalRead(PIN_SWITCH_LEFT) && measuredRPMSuccess && targetRPMSuccess) {
             pwm = (uint8_t)spid_process(&pid, (float)targetRPM.rpm, measuredRPM.rpm);
@@ -49,7 +57,10 @@ void motorControlTask(void* pvParameters) {
         Serial.println(targetRPM.rpm);
         Serial.print(">PWM:");
         Serial.println(pwm);
-
+        Serial.print(">wErr:");
+        Serial.println(measuredRPMSignal.writeErrCnt);
+        Serial.print(">rErr:");
+        Serial.println(measuredRPMSignal.readErrCnt);
         // Preempt task until next loop iteration time
         xTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(PID_INTERVAL_MS));
     }
