@@ -96,6 +96,17 @@ void gpio_callback(uint gpio, uint32_t events) {
     }
 }
 
+void configurePins(){
+    pinMode(PIN_MOTOR_PWM, OUTPUT);
+    pinMode(PIN_POTENTIOMETER, INPUT);
+    pinMode(PIN_SWITCH_LEFT, INPUT);
+    pinMode(PIN_LED_USER, OUTPUT);
+    digitalWrite(PIN_LED_USER, 1);
+
+    gpio_init(PIN_HALL_SENSOR);
+    gpio_set_dir(PIN_HALL_SENSOR, GPIO_IN);
+    gpio_set_irq_enabled_with_callback(PIN_HALL_SENSOR, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, gpio_callback);
+}
 void setup() {
     // put your setup code here, to run once:
 
@@ -114,15 +125,7 @@ void setup() {
 
     // Pin configuration
     ULOG_TRACE("Configuring pins");
-    pinMode(PIN_MOTOR_PWM, OUTPUT);
-    pinMode(PIN_POTENTIOMETER, INPUT);
-    pinMode(PIN_SWITCH_LEFT, INPUT);
-    pinMode(PIN_LED_USER, OUTPUT);
-    digitalWrite(PIN_LED_USER, 1);
-
-    gpio_init(PIN_HALL_SENSOR);
-    gpio_set_dir(PIN_HALL_SENSOR, GPIO_IN);
-    gpio_set_irq_enabled_with_callback(PIN_HALL_SENSOR, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, gpio_callback);
+    configurePins();
 
     // signals for communicating measured RPM and target RPM between tasks
     ULOG_TRACE("Initializing communication signals");
@@ -149,7 +152,7 @@ void setup() {
     if(pdPASS != xTaskCreate(motorControlTask, MOTOR_CONTROL_TASK_NAME, MOTOR_CONTROL_TASK_STACK_SIZE,
                              (void*)&mCtrlTaskParams, MOTOR_CONTROL_TASK_PRIORITY, &motorCtrlTaskHandle)) {
         ULOG_CRITICAL("Failed to create motor control task");
-        assert(false);
+        configASSERT(false);
     }
     vTaskCoreAffinitySet(motorCtrlTaskHandle, (1<<0));
     signalAgeCheckTaskParams_t sigAgeChkTskParams = {
@@ -159,7 +162,7 @@ void setup() {
                              SIGNAL_AGE_CHECK_TASK_STACK_SIZE, (void*)&sigAgeChkTskParams,
                              SIGNAL_AGE_CHECK_TASK_PRIORITY, &signalAgeCheckTaskHandle)) {
         ULOG_CRITICAL("Failed to create signal age check task");
-        assert(false);
+        configASSERT(false);
     }
     vTaskCoreAffinitySet(signalAgeCheckTaskHandle, (1<<0));
 

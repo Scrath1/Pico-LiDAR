@@ -7,7 +7,7 @@
 #include "signals/signal_types.h"
 #include "runtime_settings.h"
 
-#define MOTOR_CONTROL_TASK_STACK_SIZE (1024)
+#define MOTOR_CONTROL_TASK_STACK_SIZE (configMINIMAL_STACK_SIZE)
 #define MOTOR_CONTROL_TASK_NAME ("mtrCtrlTsk")
 #define MOTOR_CONTROL_TASK_PRIORITY (configMAX_PRIORITIES-3)
 

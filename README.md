@@ -31,7 +31,7 @@ and the the HC-SR04 ultrasonic sensor.
 <details>
 <summary>Electronic Parts (click to open)</summary>
 
-- DC Motor
+- generic RF-320 DC Motor
 - ToDo: XL6009 DC-DC Buck Boost Converter module
 - L298N DC Motor Driver module
 - Raspberry Pi Pico

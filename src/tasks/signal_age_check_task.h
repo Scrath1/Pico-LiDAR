@@ -10,6 +10,10 @@
 #define SIGNAL_AGE_CHECK_TASK_NAME ("sigAgeChkTsk")
 #define SIGNAL_AGE_CHECK_TASK_PRIORITY (configMAX_PRIORITIES-3)
 
+#if (SIGNAL_AGE_CHECK_TASK_PRIORITY >= configMAX_PRIORITIES)
+    #error "Signal age check task priority too high"
+#endif
+
 typedef struct {
     rpm_signal_t& measuredRPMSignal;
 } signalAgeCheckTaskParams_t;
