@@ -9,6 +9,24 @@ class CmdInstruction(Enum):
     NONE = 0
     SET = 1
     GET = 2
+    
+class ParameterId(Enum):
+    NONE = 0,
+    KP = 1
+    KI = 2
+    KD = 3
+    TARGET_RPM = 4
+    ENABLE_MOTOR = 5
+    
+CMD_DELIMITER = b'\n'
+    
+def buildCmdFrame(cmd: CmdInstruction, tgt: ParameterId, value: float | int) -> bytearray:
+    bytes = bytearray()
+    bytes.append(cmd.value)
+    bytes.extend(int(tgt.value).to_bytes(4))
+    bytes.extend(value.to_bytes(4))
+    bytes.extend(CMD_DELIMITER)
+    return bytes
 
 serial_device: serial.Serial = serial.Serial()
 parser = argparse.ArgumentParser(
@@ -31,16 +49,11 @@ def main():
     serial_device.baudrate = args.baud
     serial_device.timeout = 1
     serial_device.open()
-    frame0: bytearray = b"\x01\x00\x00\x00\x05\x00\x00\x00\x01\n"
-    frame1: bytearray = b"\x01\x00\x00\x00\x05\x00\x00\x00\x00\n"
-    serial_device.write(frame0)
+    serial_device.write(buildCmdFrame(CmdInstruction.SET, ParameterId.ENABLE_MOTOR, 1))
     print(serial_device.readlines())
     time.sleep(3)
-    serial_device.write(frame1)
+    serial_device.write(buildCmdFrame(CmdInstruction.SET, ParameterId.ENABLE_MOTOR, 0))
     print(serial_device.readlines())
-    # while(True):
-    #     line: str = serial_device.readline()
-    #     print(line)
     
 if __name__=="__main__":
     main()
