@@ -19,6 +19,8 @@
 // ==============================================================
 // Maximum target speed for the motor
 #define MAX_TARGET_RPM (1000)
+// Default motor rotation target speed
+#define MOTOR_TARGET_SPEED (300)
 // PID control P constant
 #define K_P (0.1)
 // PID control I constant
@@ -31,6 +33,8 @@
 #define PID_MIN_OUT (0)
 // Maximum PID controller output value
 #define PID_MAX_OUT (255)
+// Maximum PID constant value for error checking purposes
+#define PID_CONSTANT_MAX (10)
 
 // MOTOR SPEED MEASUREMENT CONFIGURATIONS
 // ==============================================================
@@ -38,6 +42,19 @@
 #define PULSES_PER_REV 4
 // Filter size for averaging of measured RPM
 #define RPM_AVERAGING_FILTER_SIZE 8
+
+// SERIAL INTERFACE CONFIGURATIONS
+// ==============================================================
+// Specifies the interval with which the serial task is run
+#define SERIAL_INTERFACE_TASK_INTERVAL_MS (100)
+// Specifies the interval with which runtime data such as the
+// current speed and pwm value are printed to the console for plotting
+#define SERIAL_INTERFACE_PLOT_OUTPUT_INTERVAL_MS (1000)
+// Determines the maximum length of a serial command in bytes
+#define SERIAL_CMD_INPUT_BUFFER_SIZE (64)
+// Time after which received serial data for commands is discarded if no
+// new data was received and the command is incomplete.
+#define SERIAL_CMD_INPUT_TIMEOUT_MS (500)
 
 // SIGNAL AGE
 // ==============================================================

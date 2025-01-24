@@ -16,7 +16,6 @@
 #endif
 
 typedef struct {
-    rpm_signal_t& targetRPMSignal;
     rpm_signal_t& measuredRPMSignal;
     runtime_settings_signal_t& runtimeSettingsSignal;
 } motorControlTaskParams_t;

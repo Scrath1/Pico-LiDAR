@@ -16,7 +16,6 @@ void motorControlTask(void* pvParameters) {
         ULOG_CRITICAL("Failed to retrieve motor control task params");
         configASSERT(false);
     }
-    rpm_signal_t& targetRPMSignal = ((motorControlTaskParams_t*)pvParameters)->targetRPMSignal;
     rpm_signal_t& measuredRPMSignal = ((motorControlTaskParams_t*)pvParameters)->measuredRPMSignal;
     runtime_settings_signal_t& rtSettingsSignal = ((motorControlTaskParams_t*)pvParameters)->runtimeSettingsSignal;
 
@@ -56,7 +55,7 @@ void motorControlTask(void* pvParameters) {
         rpm_data_t measuredRPM = {.rpm = 0};
         rpm_data_t targetRPM = {.rpm = 0};
 
-        // Check if there was an update to the PID settings
+        // Check if there was an update to any settings
         uint32_t updateTime = rtSettingsSignal.getLastUpdateTime_ms();
         if(lastSettingsUpdate != updateTime) {
             ULOG_DEBUG("PID settings have changed. Updating controller");
@@ -67,16 +66,13 @@ void motorControlTask(void* pvParameters) {
                 spid_set_ki(&pid, rtSettings.pid_controller.ki);
                 spid_set_kd(&pid, rtSettings.pid_controller.kd);
                 lastSettingsUpdate = updateTime;
-                ULOG_INFO("Updated PID settings: Kp=%0.3f, Ki=%0.3f, Kd=%0.3f", rtSettings.pid_controller.kp,
-                          rtSettings.pid_controller.ki, rtSettings.pid_controller.kd);
+                ULOG_INFO("Motor task: Received settings update");
             } else {
-                ULOG_ERROR("Failed to update PID settings");
+                ULOG_ERROR("Motor task: Failed to update settings");
             }
         }
 
-        // get current target and measured RPM values
-        bool targetRPMSuccess = false;
-        targetRPM = targetRPMSignal.read(targetRPMSuccess, SIGNAL_LOCK_TIMEOUT);
+        // get measured RPM values
         bool measuredRPMSuccess = false;
         uint32_t measuredRPMAge_ms;
         measuredRPM = measuredRPMSignal.read(measuredRPMSuccess, SIGNAL_LOCK_TIMEOUT, measuredRPMAge_ms);
@@ -85,21 +81,21 @@ void motorControlTask(void* pvParameters) {
             targetRPM.rpm = 0;
         }
 
-        if(digitalRead(PIN_SWITCH_LEFT) && measuredRPMSuccess && targetRPMSuccess) {
-            pwm = (uint8_t)spid_process(&pid, (float)targetRPM.rpm, measuredRPM.rpm);
+        if(digitalRead(PIN_SWITCH_LEFT) && rtSettings.enableMotor && measuredRPMSuccess) {
+            pwm = (uint8_t)spid_process(&pid, (float)rtSettings.pid_controller.targetRPM, measuredRPM.rpm);
         }
         pwm_set_chan_level(pwmSliceNum, pwmChannelNum, pwm);
 
-        Serial.print(">measuredRPM:");
-        Serial.println(measuredRPM.rpm);
-        Serial.print(">targetRPM:");
-        Serial.println(targetRPM.rpm);
-        Serial.print(">PWM:");
-        Serial.println(pwm);
-        Serial.print(">wErr:");
-        Serial.println(measuredRPMSignal.writeErrCnt);
-        Serial.print(">rErr:");
-        Serial.println(measuredRPMSignal.readErrCnt);
+        // Serial.print(">measuredRPM:");
+        // Serial.println(measuredRPM.rpm);
+        // Serial.print(">targetRPM:");
+        // Serial.println(targetRPM.rpm);
+        // Serial.print(">PWM:");
+        // Serial.println(pwm);
+        // Serial.print(">wErr:");
+        // Serial.println(measuredRPMSignal.writeErrCnt);
+        // Serial.print(">rErr:");
+        // Serial.println(measuredRPMSignal.readErrCnt);
         // Preempt task until next loop iteration time
         xTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(PID_INTERVAL_MS));
     }

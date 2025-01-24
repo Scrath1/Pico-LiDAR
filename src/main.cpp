@@ -13,6 +13,7 @@
 #include "spid.h"
 #include "tasks/motor_control_task.h"
 #include "tasks/signal_age_check_task.h"
+#include "tasks/serial_interface_task.h"
 #include "averaging_filter.h"
 
 #define SIGNAL_LOCK_TIMEOUT 50
@@ -23,7 +24,7 @@ AVERAGING_FILTER_DEF(hallIntervalFilter, 4);
 AVERAGING_FILTER_DEF(measuredRPMFilter, RPM_AVERAGING_FILTER_SIZE);
 AVERAGING_FILTER_DEF(targetRPMFilter, TARGET_RPM_FILTER_SIZE);
 
-rpm_signal_t targetRPMSignal, measuredRPMSignal;
+rpm_signal_t measuredRPMSignal;
 runtime_settings_signal_t rtSettingsSignal;
 
 void consoleLogger(ulog_level_t severity, char* msg) {
@@ -138,21 +139,20 @@ void setup() {
     ULOG_TRACE("Initializing communication signals");
     measuredRPMSignal.init();
     measuredRPMSignal.write({.rpm = 0}, 0);
-    targetRPMSignal.init();
-    targetRPMSignal.write({.rpm = 0}, 0);
     rtSettingsSignal.init();
     rtSettingsSignal.write({
         .pid_controller = {
             .kp = K_P,
             .ki = K_I,
-            .kd = K_D
-        }
+            .kd = K_D,
+            .targetRPM = MOTOR_TARGET_SPEED,
+        },
+        .enableMotor = false
     }, 0);
 
     // create tasks
     ULOG_TRACE("Creating tasks");
     motorControlTaskParams_t mCtrlTaskParams = {
-        .targetRPMSignal = targetRPMSignal,
         .measuredRPMSignal = measuredRPMSignal,
         .runtimeSettingsSignal = rtSettingsSignal
     };
@@ -172,20 +172,24 @@ void setup() {
         configASSERT(false);
     }
     vTaskCoreAffinitySet(signalAgeCheckTaskHandle, (1<<0));
+    serialInterfaceTaskParams_t serIntTskParams = {
+        .measuredRPMSignal = measuredRPMSignal,
+        .runtimeSettingsSignal = rtSettingsSignal
+    };
+    if(pdPASS != xTaskCreate(serialInterfaceTask, SERIAL_INTERFACE_TASK_NAME,
+                             SERIAL_INTERFACE_TASK_STACK_SIZE, (void*)&serIntTskParams,
+                             SERIAL_INTERFACE_TASK_PRIORITY, &serialInterfaceTaskHandle)) {
+        ULOG_CRITICAL("Failed to create serial interface task");
+        configASSERT(false);
+    }
+    vTaskCoreAffinitySet(signalAgeCheckTaskHandle, (1<<0));
 
-    // vTaskDelete(NULL);
-    // taskYIELD();
+    ULOG_TRACE("Setup finished");
+    vTaskDelete(NULL);
+    taskYIELD();
     // This is done in the background by the arduino-pico core already
     // vTaskStartScheduler();
-    ULOG_TRACE("Setup finished");
+    
 }
 
-void loop() {
-    // ToDo: Remove after testing
-    volatile uint16_t pot = analogRead(PIN_POTENTIOMETER);
-    if(pot < 15) pot = 0;
-    averaging_filter_put(&targetRPMFilter, map(pot, 0, 1023, 0, MAX_TARGET_RPM));
-    uint32_t targetRPM = averaging_filter_get_avg(&targetRPMFilter);
-    targetRPMSignal.write({.rpm = targetRPM}, SIGNAL_LOCK_TIMEOUT);
-    vTaskDelay(100);
-}
+void loop() {}
