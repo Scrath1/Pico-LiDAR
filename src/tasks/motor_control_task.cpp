@@ -85,16 +85,6 @@ void motorControlTask(void* pvParameters) {
         }
         pwm_set_chan_level(pwmSliceNum, pwmChannelNum, pwm);
 
-        // Serial.print(">measuredRPM:");
-        // Serial.println(measuredRPM.rpm);
-        // Serial.print(">targetRPM:");
-        // Serial.println(targetRPM.rpm);
-        // Serial.print(">PWM:");
-        // Serial.println(pwm);
-        // Serial.print(">wErr:");
-        // Serial.println(measuredRPMSignal.writeErrCnt);
-        // Serial.print(">rErr:");
-        // Serial.println(measuredRPMSignal.readErrCnt);
         // Preempt task until next loop iteration time
         xTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(PID_INTERVAL_MS));
     }

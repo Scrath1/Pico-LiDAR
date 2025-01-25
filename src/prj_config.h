@@ -52,7 +52,7 @@
 #define SERIAL_INTERFACE_TASK_INTERVAL_MS (100)
 // Specifies the interval with which runtime data such as the
 // current speed and pwm value are printed to the console for plotting
-#define SERIAL_INTERFACE_PLOT_OUTPUT_INTERVAL_MS (1000)
+#define SERIAL_INTERFACE_PLOT_OUTPUT_INTERVAL_MS (250)
 // Determines the maximum length of a serial command in bytes
 #define SERIAL_CMD_INPUT_BUFFER_SIZE (64)
 // Time after which received serial data for commands is discarded if no
