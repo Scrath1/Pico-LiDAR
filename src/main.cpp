@@ -88,9 +88,25 @@ void hallSensorISR(uint32_t events, BaseType_t& xHigherPriorityTaskWoken){
     }
 }
 
+void pushBtnLeftISR(BaseType_t& xHigherPriorityTaskWoken){
+    static uint32_t lastTriggerTime_ms = 0;
+    const uint32_t currentTime_ms = xTaskGetTickCountFromISR();
+    if(currentTime_ms - lastTriggerTime_ms > BTN_DEBOUNCE_MS){
+        // button isn't bouncing
+        bool readSuccess = false;
+        runtime_settings_t rts = rtSettingsSignal.readFromISR(readSuccess, &xHigherPriorityTaskWoken);
+        if(readSuccess){
+            rts.enableMotor = !rts.enableMotor;
+            rtSettingsSignal.writeFromISR(rts, &xHigherPriorityTaskWoken);
+        }
+    }
+    lastTriggerTime_ms = currentTime_ms;
+}
+
 void gpio_callback(uint gpio, uint32_t events) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     if(gpio == PIN_HALL_SENSOR) hallSensorISR(events, xHigherPriorityTaskWoken);
+    else if(gpio == PIN_PUSHBTN_LEFT) pushBtnLeftISR(xHigherPriorityTaskWoken);
 
     if(xHigherPriorityTaskWoken){
         portYIELD_FROM_ISR(pdTRUE);
@@ -100,12 +116,18 @@ void gpio_callback(uint gpio, uint32_t events) {
 void configurePins(){
     pinMode(PIN_POTENTIOMETER, INPUT);
     pinMode(PIN_SWITCH_LEFT, INPUT);
+    pinMode(PIN_PUSHBTN_LEFT, INPUT);
     pinMode(PIN_LED_USER, OUTPUT);
     digitalWrite(PIN_LED_USER, 1);
 
     gpio_init(PIN_HALL_SENSOR);
     gpio_set_dir(PIN_HALL_SENSOR, GPIO_IN);
     gpio_set_irq_enabled_with_callback(PIN_HALL_SENSOR, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, gpio_callback);
+
+    gpio_init(PIN_PUSHBTN_LEFT);
+    gpio_set_dir(PIN_PUSHBTN_LEFT, GPIO_IN);
+    // only first gpio irq to be configured has to use gpio_set_irq_enabled_with_callback
+    gpio_set_irq_enabled(PIN_PUSHBTN_LEFT, GPIO_IRQ_EDGE_FALL, true);
 
     gpio_set_function(PIN_MOTOR_PWM, GPIO_FUNC_PWM);
     uint8_t pwmSlice = pwm_gpio_to_slice_num(PIN_MOTOR_PWM);

@@ -61,7 +61,10 @@ struct signal {
 
     bool writeFromISR(T d, BaseType_t* higherPriorityTaskWoken) {
 #ifdef SIGNAL_USE_MUTEX
-        if(NULL == mutex) return false;
+        if(NULL == mutex || NULL == higherPriorityTaskWoken){
+            writeErrCnt++;
+            return false;
+        }
         if(pdTRUE == xSemaphoreTakeFromISR(this->mutex, higherPriorityTaskWoken)) {
 #else
         if(true) {
@@ -118,6 +121,30 @@ struct signal {
             signalAge_ms = xTaskGetTickCount() - this->updateTimestamp_ms;
 #ifdef SIGNAL_USE_MUTEX
             xSemaphoreGive(this->mutex);
+#endif  // SIGNAL_USE_MUTEX
+        } else {
+            readErrCnt++;
+            successful = false;
+        }
+        return out;
+    }
+
+    T readFromISR(bool& successful, BaseType_t* higherPriorityTaskWoken) {
+        T out;
+#ifdef SIGNAL_USE_MUTEX
+        if(NULL == mutex || NULL == higherPriorityTaskWoken) {
+            readErrCnt++;
+            successful = false;
+            return out;
+        }
+        if(pdTRUE == xSemaphoreTakeFromISR(this->mutex, higherPriorityTaskWoken)) {
+#else
+        if(true) {
+#endif  // SIGNAL_USE_MUTEX
+            out = this->data;
+            successful = true;
+#ifdef SIGNAL_USE_MUTEX
+            xSemaphoreGiveFromISR(this->mutex, higherPriorityTaskWoken);
 #endif  // SIGNAL_USE_MUTEX
         } else {
             readErrCnt++;

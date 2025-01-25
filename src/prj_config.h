@@ -7,9 +7,12 @@
 #define PIN_HALL_SENSOR 26
 #define PIN_POTENTIOMETER 27
 #define PIN_SWITCH_LEFT 11
+#define PIN_PUSHBTN_LEFT 13
 #define PIN_LED_USER 17
 #define LED_ON (0)
 #define LED_OFF (1)
+// debouncing time for buttons
+#define BTN_DEBOUNCE_MS (50)
 
 // COMMUNICATION
 // ==============================================================

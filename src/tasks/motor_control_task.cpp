@@ -58,7 +58,6 @@ void motorControlTask(void* pvParameters) {
         // Check if there was an update to any settings
         uint32_t updateTime = rtSettingsSignal.getLastUpdateTime_ms();
         if(lastSettingsUpdate != updateTime) {
-            ULOG_DEBUG("PID settings have changed. Updating controller");
             bool settingsSuccess = false;
             rtSettings = rtSettingsSignal.read(settingsSuccess, SIGNAL_LOCK_TIMEOUT);
             if(settingsSuccess) {
