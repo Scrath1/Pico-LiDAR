@@ -4,6 +4,7 @@ import serial
 # import commands
 import time
 from enum import Enum
+import threading
 
 class CmdInstruction(Enum):
     NONE = 0
@@ -33,6 +34,10 @@ parser = argparse.ArgumentParser(
     prog='pico-lidar companion program'
 )
 
+def readSerialThread():
+    while True:
+        print(serial_device.readline())
+
 def main():
     serialArgs = parser.add_argument_group("Serial", "Configuration of the serial interface")
     serialArgs.add_argument('-p', '--port', action='store', type=str, help="Serial port", required=True)
@@ -47,13 +52,18 @@ def main():
     
     serial_device.port = args.port
     serial_device.baudrate = args.baud
-    serial_device.timeout = 1
     serial_device.open()
+    
+    serialRxThread = threading.Thread(target=readSerialThread)
+    serialRxThread.daemon = True # Marks thread to exit automatically when main thread exits
+    serialRxThread.start()
+    
     serial_device.write(buildCmdFrame(CmdInstruction.SET, ParameterId.ENABLE_MOTOR, 1))
-    print(serial_device.readlines())
+    # print(serial_device.readlines())
     time.sleep(3)
     serial_device.write(buildCmdFrame(CmdInstruction.SET, ParameterId.ENABLE_MOTOR, 0))
-    print(serial_device.readlines())
+    # print(serial_device.readlines())
+    time.sleep(3)
     
 if __name__=="__main__":
     main()
