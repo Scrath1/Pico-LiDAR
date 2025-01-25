@@ -31,9 +31,12 @@ def main():
 
     args = parser.parse_args(sys.argv[1:])
 
+    # send_args(args)
+    # si.init_serial("COM7", args.baud)
+    # run_gui()
+    
     si.init_serial(args.port, args.baud)
-    si.send_args(args)
-
+    send_args(args)
     if(args.pid_gui):
         run_gui()
     else:

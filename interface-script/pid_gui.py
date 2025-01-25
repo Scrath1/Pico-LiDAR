@@ -29,13 +29,15 @@ def create_gui() -> tk.Tk:
         ui_rpm.set(rpm)
         
     def on_motor_enable_btn_press():
-        if bool(btn_var.get()):
+        if bool(ui_mtr_btn_var.get()):
             print("Starting motor")
             si.start_motor()
         else:
             print("Stopping Motor")
             si.stop_motor()
-
+            
+    def on_update_btn_press():
+        ui_mtr_btn_var.set(si.get_motor_state())
 
     window = tk.Tk()
     window.title("PID Tuning GUI")
@@ -66,10 +68,13 @@ def create_gui() -> tk.Tk:
     ui_rpm = ttk.Spinbox(label_frame, from_=target_rpm_lower_limit, to=target_rpm_upper_limit, increment=10, command=on_rpm_spinbox_change)
     ui_rpm.grid(column=spinbox_col, row=3)
     
-    btn_var = tk.IntVar()
-    ui_mtr_btn = ttk.Checkbutton(window, text="Motor on", command=on_motor_enable_btn_press, onvalue=True, offvalue=False, variable=btn_var)
-    btn_var.set(0)
+    ui_mtr_btn_var = tk.IntVar()
+    ui_mtr_btn = ttk.Checkbutton(window, text="Motor on", command=on_motor_enable_btn_press, onvalue=True, offvalue=False, variable=ui_mtr_btn_var)
+    ui_mtr_btn_var.set(0)
     ui_mtr_btn.grid(column=0, row=1, pady=20)
+    
+    ui_update_btn = ttk.Button(window, text="Update from device", command=on_update_btn_press)
+    ui_update_btn.grid(column=0, row=2, pady=20)
     
     spinbox_set_init_values(0,0,0, target_rpm_lower_limit)
     return window

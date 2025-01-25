@@ -1,10 +1,14 @@
 #include "serial_commands.h"
-// #include <Arduino.h>
+#include <Arduino.h>
 #include "prj_config.h"
 
 #include "ulog.h"
 
 #define SIGNAL_LOCK_TIMEOUT 10
+
+// Used to mark return packages for the get command between the various log messages
+#define ASCII_STX 2 // start of text
+#define ASCII_ETX 3 // end of text
 
 bool parseCommand(runtime_settings_signal_t& settings, const uint8_t* frame, uint8_t frameSize){
     if(frame == NULL){
@@ -34,6 +38,8 @@ bool parseCommand(runtime_settings_signal_t& settings, const uint8_t* frame, uin
             return false;
         case CMD_SET:
             return cmd_set(settings, frame, frameSize);
+        case CMD_GET:
+            return cmd_get(settings, frame, frameSize);
     }
     return true;
 }
@@ -80,7 +86,7 @@ bool cmd_set(runtime_settings_signal_t& settings, const uint8_t* frame, const ui
     uint32_t parameterValue = bytesToWord32(&(frame[5]));
     switch(tgtVar){
         default:
-            ULOG_ERROR("Invalid parameter ID: %lu", parameterValue);
+            ULOG_ERROR("Invalid parameter ID: %lu", tgtVar);
             return false;
         case ID_NONE:
             ULOG_ERROR("Variable ID NONE received");
@@ -133,4 +139,64 @@ bool cmd_set(runtime_settings_signal_t& settings, const uint8_t* frame, const ui
         ULOG_ERROR("Settings writeback failed");
         return false;
     }
+}
+
+void printGetCmdVariable(uint32_t var){
+    Serial.write(ASCII_STX);
+    uint8_t* bytes = reinterpret_cast<uint8_t*>(&var);
+    Serial.write(bytes, sizeof(uint32_t));
+    Serial.write(ASCII_ETX);
+}
+
+bool cmd_get(runtime_settings_signal_t& settings, const uint8_t* frame, const uint32_t frameSize){
+    if(frame == NULL){
+        ULOG_DEBUG("frame must not be NULL");
+        return false;
+    }
+    // The get command expects a frame length of 6
+    // 1 + 4 + 1
+    if((frameSize != 6 || frameSize == 0)){
+        ULOG_DEBUG("Invalid framesize for cmd_get: %u", frameSize);
+        return false;
+    }
+
+    // sanity check that the function was called for the correct command
+    if(frame[0] != CMD_GET){
+        ULOG_DEBUG("cmd_get invalid cmd code: %u", frame[0]);
+        return false;
+    }
+
+    parameter_id_t tgtVar = (parameter_id_t)bytesToWord32(&(frame[1]));
+    
+    bool readSuccess = false;
+    runtime_settings_t rts = settings.read(readSuccess, SIGNAL_LOCK_TIMEOUT);
+    if(!readSuccess){
+        ULOG_DEBUG("cmd_set settings read failed");
+        return false;
+    }
+
+    switch(tgtVar){
+        default:
+            ULOG_ERROR("Invalid parameter ID: %lu", tgtVar);
+            return false;
+        case ID_NONE:
+            ULOG_ERROR("Variable ID NONE received");
+            return false;
+        case ID_KP:
+            printGetCmdVariable(rts.pid_controller.kp);
+            break;
+        case ID_KI:
+            printGetCmdVariable(rts.pid_controller.ki);
+            break;
+        case ID_KD:
+            printGetCmdVariable(rts.pid_controller.kd);
+            break;
+        case ID_TARGET_RPM:
+            printGetCmdVariable(rts.pid_controller.targetRPM);
+            break;
+        case ID_ENABLE_MOTOR:
+            printGetCmdVariable(rts.enableMotor);
+            break;
+    }
+    return true;
 }

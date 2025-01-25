@@ -49,4 +49,6 @@ bool parseCommand(runtime_settings_signal_t& settings, const uint8_t* frame, uin
 
 bool cmd_set(runtime_settings_signal_t& settings, const uint8_t* frame, const uint32_t frameSize);
 
+bool cmd_get(runtime_settings_signal_t& settings, const uint8_t* frame, const uint32_t frameSize);
+
 #endif // SERIAL_COMMANDS_H

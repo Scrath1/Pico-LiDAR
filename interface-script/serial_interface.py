@@ -19,8 +19,12 @@ class _ParameterId(Enum):
     ENABLE_MOTOR = 5
     
 CMD_DELIMITER = b'\n'
-    
-def _buildCmdFrame(cmd: _CmdInstruction, tgt: _ParameterId, value: float | int) -> bytearray:
+
+_serial_device: serial.Serial = serial.Serial()
+_cmd_frame_queue = queue.Queue()
+_cmd_reply_queue = queue.Queue()
+
+def _buildCmdFrame(cmd: _CmdInstruction, tgt: _ParameterId, value: float | int | None = None) -> bytearray:
     bytes = bytearray()
     bytes.append(cmd.value)
     bytes.extend(int(tgt.value).to_bytes(4))
@@ -32,34 +36,41 @@ def _buildCmdFrame(cmd: _CmdInstruction, tgt: _ParameterId, value: float | int) 
             bytes.extend(b)
         else:
             bytes.extend(int(0).to_bytes(4))
-    else:
-        raise TypeError(f"Invalid value parameter {type(value)}")
     bytes.extend(CMD_DELIMITER)
     return bytes
 
-serial_device: serial.Serial = serial.Serial()
-cmdFrameQueue = queue.Queue()
-
 def _enqueueCmdFrame(b: bytearray):
-    cmdFrameQueue.put(b)
+    _cmd_frame_queue.put(b)
 
 def _readSerialThread():
+    receiving_reply = False
+    reply_buffer: bytearray = bytearray()
     while True:
-        if(serial_device.is_open):
-            print(serial_device.readline())
-        
+        if(_serial_device.is_open):
+            c = _serial_device.read()
+            if ord(c) == 2: # ASCII symbol STX found
+                receiving_reply = True
+            elif ord(c) == 3:
+                receiving_reply = False
+                _cmd_reply_queue.put(reply_buffer)
+                reply_buffer = bytearray()
+            elif receiving_reply:
+                reply_buffer.extend(c)
+            else:
+                print(f"{c.decode()}", end='')
+
 def _writeSerialThread():
     while True:
-        if(serial_device.is_open):
-            cmd = cmdFrameQueue.get()
-            serial_device.write(cmd)
-            cmdFrameQueue.task_done()
+        if(_serial_device.is_open):
+            cmd = _cmd_frame_queue.get()
+            _serial_device.write(cmd)
+            _cmd_frame_queue.task_done()
             time.sleep(0.01) # sleep 10ms between commands
 
 def init_serial(port: str, baud: int):
-    serial_device.port = port
-    serial_device.baudrate = baud
-    serial_device.open()
+    _serial_device.port = port
+    _serial_device.baudrate = baud
+    _serial_device.open()
     
     serialRxThread = threading.Thread(target=_readSerialThread)
     serialRxThread.daemon = True # Marks thread to exit automatically when main thread exits
@@ -68,13 +79,18 @@ def init_serial(port: str, baud: int):
     serialTxThread = threading.Thread(target=_writeSerialThread)
     serialTxThread.daemon = True
     serialTxThread.start()
-    
+
 def start_motor():
     _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, 1))
     
 def stop_motor():
     _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, 0))
-    
+
+def get_motor_state() -> bool:
+    _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.GET, _ParameterId.ENABLE_MOTOR))
+    reply: bytearray = _cmd_reply_queue.get()
+    return bool.from_bytes(reply)
+
 def set_target_rpm(val: int):
     _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.TARGET_RPM, val))
 
