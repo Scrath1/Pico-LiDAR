@@ -58,7 +58,9 @@ void serialInterfaceTask(void* pvParameters){
                     ULOG_ERROR("Failed to parse command");
                 }
                 // clear buffer
-                clearBufferFlag = true;
+                memset(cmdInputBuffer, 0, fillLevel);
+                fillLevel = 0;
+                timestampLastCharDetected_ms = 0;
             }
         }
 
@@ -66,15 +68,10 @@ void serialInterfaceTask(void* pvParameters){
         if(timestampLastCharDetected_ms != 0){
             uint32_t lastCharAge = currentTime_ms - timestampLastCharDetected_ms;
             if(lastCharAge > SERIAL_CMD_INPUT_TIMEOUT_MS){
-                clearBufferFlag = true;
+                memset(cmdInputBuffer, 0, fillLevel);
+                fillLevel = 0;
+                timestampLastCharDetected_ms = 0;
             }
-        }
-
-        // clear command buffer if required
-        if(clearBufferFlag){
-            memset(cmdInputBuffer, 0, fillLevel);
-            fillLevel = 0;
-            timestampLastCharDetected_ms = 0;
         }
 
         // Transmit runtime data for plotting at fixed interval

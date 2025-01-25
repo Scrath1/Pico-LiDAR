@@ -86,41 +86,49 @@ bool cmd_set(runtime_settings_signal_t& settings, const uint8_t* frame, const ui
             ULOG_ERROR("Variable ID NONE received");
             return false;
         case ID_KP:
-            rts.pid_controller.kp = (float)parameterValue;
-            if(rts.pid_controller.kp > PID_CONSTANT_MAX)
+            rts.pid_controller.kp = *(reinterpret_cast<float*>(&parameterValue));
+            if(rts.pid_controller.kp > PID_CONSTANT_MAX){
                 // value wasn't written back to setting signal so
                 // we can just return here
-                ULOG_ERROR("K_D value too large: %0.3f", (float)parameterValue);
+                ULOG_ERROR("K_P value too large: %0.3f", rts.pid_controller.kp);
                 return false;
+            }
+            else ULOG_DEBUG("Updated to K_P: %0.3f", rts.pid_controller.kp);
             break;
         case ID_KI:
-            rts.pid_controller.ki = (float)parameterValue;
-            if(rts.pid_controller.ki > PID_CONSTANT_MAX)
+            rts.pid_controller.ki = *(reinterpret_cast<float*>(&parameterValue));
+            if(rts.pid_controller.ki > PID_CONSTANT_MAX){
                 // value wasn't written back to setting signal so
                 // we can just return here
-                ULOG_ERROR("K_I value too large: %0.3f", (float)parameterValue);
+                ULOG_ERROR("K_I value too large: %0.3f", rts.pid_controller.ki);
                 return false;
+            }
+            else ULOG_DEBUG("Updated to K_I: %0.3f", rts.pid_controller.ki);
             break;
         case ID_KD:
-            rts.pid_controller.kd = (float)parameterValue;
-            if(rts.pid_controller.kd > PID_CONSTANT_MAX)
+            rts.pid_controller.kd = *(reinterpret_cast<float*>(&parameterValue));
+            if(rts.pid_controller.kd > PID_CONSTANT_MAX){
                 // value wasn't written back to setting signal so
                 // we can just return here
-                ULOG_ERROR("K_D value too large: %0.3f", (float)parameterValue);
+                ULOG_ERROR("K_D value too large: %0.3f", rts.pid_controller.kd);
                 return false;
+            }
+            else ULOG_DEBUG("Updated to K_D: %0.3f", rts.pid_controller.kd);
             break;
         case ID_TARGET_RPM:
             rts.pid_controller.targetRPM = parameterValue;
-            if(rts.pid_controller.targetRPM > MAX_TARGET_RPM)
+            if(rts.pid_controller.targetRPM > MAX_TARGET_RPM){
                 ULOG_ERROR("Target RPM too large: %lu", parameterValue);
                 return false;
+            }
             break;
         case ID_ENABLE_MOTOR:
             rts.enableMotor = parameterValue;
             break;
     }
     // write back settings object
-    if(settings.write(rts, SIGNAL_LOCK_TIMEOUT)) return true;
+    if(settings.write(rts, SIGNAL_LOCK_TIMEOUT))
+        return true;
     else{
         ULOG_ERROR("Settings writeback failed");
         return false;
