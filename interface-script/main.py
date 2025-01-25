@@ -8,6 +8,16 @@ parser = argparse.ArgumentParser(
     prog='pico-lidar companion program'
 )
 
+def send_args(args):
+    if(args.rpm):
+        si.set_target_rpm(args.arpm)
+    if(args.kp):
+        si.set_kp(args.kp)
+    if(args.ki):
+        si.set_ki(args.ki)
+    if(args.kd):
+        si.set_kd(args.kd)
+
 def main():
     serialArgs = parser.add_argument_group("Serial", "Configuration of the serial interface")
     serialArgs.add_argument('-p', '--port', action='store', type=str, help="Serial port", required=True)

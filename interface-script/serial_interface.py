@@ -3,6 +3,7 @@ from enum import Enum
 import threading
 import queue
 import struct
+import time
 
 class _CmdInstruction(Enum):
     NONE = 0
@@ -53,16 +54,7 @@ def _writeSerialThread():
             cmd = cmdFrameQueue.get()
             serial_device.write(cmd)
             cmdFrameQueue.task_done()
-
-def send_args(args):
-    if(args.rpm):
-        _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.TARGET_RPM, args.rpm))
-    if(args.kp):
-        _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.KP, args.kp))
-    if(args.ki):
-        _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.KI, args.ki))
-    if(args.kd):
-        _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.KD, args.kd))
+            time.sleep(0.01) # sleep 10ms between commands
 
 def init_serial(port: str, baud: int):
     serial_device.port = port
