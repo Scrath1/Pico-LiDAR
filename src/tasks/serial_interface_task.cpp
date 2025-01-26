@@ -81,8 +81,8 @@ void serialInterfaceTask(void* pvParameters){
             runtime_settings_t rts = rtSettingsSignal.read(successRtsRead, SIGNAL_LOCK_TIMEOUT_MS);
             rpm_data_t measuredRPM = measuredRPMSignal.read(successMeasuredRPMRead, SIGNAL_LOCK_TIMEOUT_MS);
             if(successRtsRead && successMeasuredRPMRead){
-                Serial.print(">targetRPM:");
-                Serial.println(rts.pid_controller.targetRPM);
+                // Serial.print(">targetRPM:");
+                // Serial.println(rts.pid_controller.targetRPM);
                 Serial.print(">measuredRPM:");
                 Serial.println(measuredRPM.rpm);
                 // Serial.print(">PWM:");

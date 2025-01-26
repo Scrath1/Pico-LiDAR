@@ -22,7 +22,7 @@ def create_gui() -> tk.Tk:
         value: int = int(ui_rpm.get())
         si.set_target_rpm(value)
         
-    def spinbox_set_init_values(kp: float, ki: float, kd: float, rpm: int):
+    def set_spinbox_values(kp: float, ki: float, kd: float, rpm: int):
         ui_kp.set(kp)
         ui_ki.set(ki)
         ui_kd.set(kd)
@@ -38,45 +38,49 @@ def create_gui() -> tk.Tk:
             
     def on_update_btn_press():
         ui_mtr_btn_var.set(si.get_motor_state())
+        set_spinbox_values(si.get_kp(), si.get_ki(), si.get_kd(), si.get_target_rpm())
 
     window = tk.Tk()
     window.title("PID Tuning GUI")
     spinbox_vertical_spacing = 5
     
-    label_frame = ttk.Labelframe(window, text="PID values")
-    label_frame.grid(column=0, row=0, padx=20, pady=20)
+    pid_label_frame = ttk.Labelframe(window, text="PID values")
+    pid_label_frame.grid(column=0, row=0, padx=20, pady=20)
 
     label_col = 0
     spinbox_col = 1
-    ui_kp_label = ttk.Label(label_frame, text="Kp")
+    ui_kp_label = ttk.Label(pid_label_frame, text="Kp")
     ui_kp_label.grid(column=label_col, row=0)
-    ui_kp = ttk.Spinbox(label_frame, from_=0, to=10, increment=0.01, command=on_kp_spinbox_change)
+    ui_kp = ttk.Spinbox(pid_label_frame, from_=0, to=10, increment=0.01, command=on_kp_spinbox_change)
     ui_kp.grid(column=spinbox_col, row=0, pady=spinbox_vertical_spacing)
     
-    ui_ki_label = ttk.Label(label_frame, text="Ki")
+    ui_ki_label = ttk.Label(pid_label_frame, text="Ki")
     ui_ki_label.grid(column=label_col, row=1)
-    ui_ki = ttk.Spinbox(label_frame, from_=0, to=10, increment=0.01, command=on_ki_spinbox_change)
+    ui_ki = ttk.Spinbox(pid_label_frame, from_=0, to=10, increment=0.01, command=on_ki_spinbox_change)
     ui_ki.grid(column=spinbox_col, row=1, pady=spinbox_vertical_spacing)
 
-    ui_kd_label = ttk.Label(label_frame, text="Kd")
+    ui_kd_label = ttk.Label(pid_label_frame, text="Kd")
     ui_kd_label.grid(column=label_col, row=2)
-    ui_kd = ttk.Spinbox(label_frame, from_=0, to=10, increment=0.01, command=on_kd_spinbox_change)
+    ui_kd = ttk.Spinbox(pid_label_frame, from_=0, to=10, increment=0.01, command=on_kd_spinbox_change)
     ui_kd.grid(column=spinbox_col, row=2, pady=spinbox_vertical_spacing)
     
-    ui_rpm_label = ttk.Label(label_frame, text="Target RPM")
-    ui_rpm_label.grid(column=label_col, row=3)
-    ui_rpm = ttk.Spinbox(label_frame, from_=target_rpm_lower_limit, to=target_rpm_upper_limit, increment=10, command=on_rpm_spinbox_change)
-    ui_rpm.grid(column=spinbox_col, row=3)
+    motor_label_frame = ttk.LabelFrame(window, text="Motor control")
+    motor_label_frame.grid(column=0, row=1, padx=20, pady=20)
+    
+    ui_rpm_label = ttk.Label(motor_label_frame, text="Target RPM")
+    ui_rpm_label.grid(column=label_col, row=0)
+    ui_rpm = ttk.Spinbox(motor_label_frame, from_=target_rpm_lower_limit, to=target_rpm_upper_limit, increment=10, command=on_rpm_spinbox_change)
+    ui_rpm.grid(column=spinbox_col, row=0)
     
     ui_mtr_btn_var = tk.IntVar()
-    ui_mtr_btn = ttk.Checkbutton(window, text="Motor on", command=on_motor_enable_btn_press, onvalue=True, offvalue=False, variable=ui_mtr_btn_var)
+    ui_mtr_btn = ttk.Checkbutton(motor_label_frame, text="Motor on", command=on_motor_enable_btn_press, onvalue=True, offvalue=False, variable=ui_mtr_btn_var)
     ui_mtr_btn_var.set(0)
     ui_mtr_btn.grid(column=0, row=1, pady=20)
     
     ui_update_btn = ttk.Button(window, text="Update from device", command=on_update_btn_press)
     ui_update_btn.grid(column=0, row=2, pady=20)
     
-    spinbox_set_init_values(0,0,0, target_rpm_lower_limit)
+    set_spinbox_values(0,0,0, target_rpm_lower_limit)
     return window
 
 def run_gui():

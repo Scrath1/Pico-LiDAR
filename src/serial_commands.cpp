@@ -6,10 +6,6 @@
 
 #define SIGNAL_LOCK_TIMEOUT 10
 
-// Used to mark return packages for the get command between the various log messages
-#define ASCII_STX 2 // start of text
-#define ASCII_ETX 3 // end of text
-
 bool parseCommand(runtime_settings_signal_t& settings, const uint8_t* frame, uint8_t frameSize){
     if(frame == NULL){
         ULOG_DEBUG("frame is NULL");
@@ -141,13 +137,6 @@ bool cmd_set(runtime_settings_signal_t& settings, const uint8_t* frame, const ui
     }
 }
 
-void printGetCmdVariable(uint32_t var){
-    Serial.write(ASCII_STX);
-    uint8_t* bytes = reinterpret_cast<uint8_t*>(&var);
-    Serial.write(bytes, sizeof(uint32_t));
-    Serial.write(ASCII_ETX);
-}
-
 bool cmd_get(runtime_settings_signal_t& settings, const uint8_t* frame, const uint32_t frameSize){
     if(frame == NULL){
         ULOG_DEBUG("frame must not be NULL");
@@ -183,19 +172,19 @@ bool cmd_get(runtime_settings_signal_t& settings, const uint8_t* frame, const ui
             ULOG_ERROR("Variable ID NONE received");
             return false;
         case ID_KP:
-            printGetCmdVariable(rts.pid_controller.kp);
+            Serial.printf(">K_p: %f\n", rts.pid_controller.kp);
             break;
         case ID_KI:
-            printGetCmdVariable(rts.pid_controller.ki);
+            Serial.printf(">K_i: %f\n", rts.pid_controller.ki);
             break;
         case ID_KD:
-            printGetCmdVariable(rts.pid_controller.kd);
+            Serial.printf(">K_d: %f\n", rts.pid_controller.kd);
             break;
         case ID_TARGET_RPM:
-            printGetCmdVariable(rts.pid_controller.targetRPM);
+            Serial.printf(">targetRPM: %lu\n", rts.pid_controller.targetRPM);
             break;
         case ID_ENABLE_MOTOR:
-            printGetCmdVariable(rts.enableMotor);
+            Serial.printf(">enableMotor: %u\n", rts.enableMotor);
             break;
     }
     return true;
