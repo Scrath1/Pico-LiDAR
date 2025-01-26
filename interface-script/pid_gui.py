@@ -1,9 +1,23 @@
 import tkinter as tk
 from tkinter import ttk
+import queue
 import serial_interface as si
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,  
+NavigationToolbar2Tk) 
 
 target_rpm_lower_limit = 50
 target_rpm_upper_limit = 1000
+
+max_data_points = 500
+
+measured_rpm_queue = queue.Queue()
+measured_rpm = list()
+target_rpm_queue = queue.Queue()
+target_rpm = list()
+
+canvas: FigureCanvasTkAgg
+fig = Figure(figsize=(5,5), dpi=100)
 
 def create_gui() -> tk.Tk:
     def on_kp_spinbox_change():
@@ -83,6 +97,54 @@ def create_gui() -> tk.Tk:
     set_spinbox_values(0,0,0, target_rpm_lower_limit)
     return window
 
+def embed_plots(window: tk.Tk):
+    global fig, canvas
+    def on_clear_data_btn_press():
+        global measured_rpm, target_rpm
+        measured_rpm = list()
+        target_rpm = list()
+    canvas = FigureCanvasTkAgg(fig, master=window)
+    canvas.draw()
+    canvas.get_tk_widget().grid(column=1, row=0)
+    
+    ui_clear_data_btn = ttk.Button(window, text="Clear plot", command=on_clear_data_btn_press)
+    ui_clear_data_btn.grid(column=1, row=1)
+    
+def get_queued_values(q: queue.Queue, tgt_list: list):
+    while q.qsize() > 0:
+        ts, val = q.get()
+        if len(tgt_list) >= max_data_points:
+            tgt_list.pop(0)
+        tgt_list.append((ts, val))
+
+def update_plots():
+    global measured_rpm_queue, target_rpm_queue, fig, canvas
+    # get data
+    get_queued_values(measured_rpm_queue, measured_rpm)
+    get_queued_values(target_rpm_queue, target_rpm)
+    
+    fig.clear()
+    rpm_plot = fig.add_subplot()
+    measured_rpm_timestamps = [v[0] for v in measured_rpm]
+    measured_rpm_values = [v[1] for v in measured_rpm]
+    target_rpm_timestamps = [v[0] for v in target_rpm]
+    target_rpm_values = [v[1] for v in target_rpm]
+    if len(measured_rpm) > 0:
+        rpm_plot.plot(measured_rpm_timestamps, measured_rpm_values, label="measured RPM")
+        rpm_plot.plot(target_rpm_timestamps, target_rpm_values, label="target RPM")
+        rpm_plot.set_xlabel("Timestamp (ms)")
+        rpm_plot.set_ylabel("RPM")
+        rpm_plot.legend()
+        rpm_plot.grid()
+    canvas.draw()
+
 def run_gui():
+    global measured_rpm_queue, target_rpm_queue
+    measured_rpm_queue = si.subscribe("measuredRPM", 200)
+    target_rpm_queue = si.subscribe("targetRPM", 200)
     window = create_gui()
-    window.mainloop()
+    embed_plots(window)
+    while True:
+        update_plots()
+        window.update_idletasks()
+        window.update()

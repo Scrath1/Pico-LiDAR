@@ -30,6 +30,7 @@ CMD_DELIMITER = b'\n'
 _serial_device: serial.Serial = serial.Serial()
 _cmd_frame_queue = queue.Queue()
 _subscribers = dict(list())
+_program_start_time = time.time()
 
 # Used for the getter functions to receive data from the serial read thread
 # _ParameterId is used as the key
@@ -38,7 +39,7 @@ _internal_queues = dict()
 def subscribe(key: str, max_size: int = 0) -> queue:
     """Subscribe to data messages with a specific key
     When a message is received, it's parsed value is put into the
-    queue returned by this function.
+    queue returned by this function as tuple (timestamp, value)
     
     Args:
         key (str): The data point key for which messages are
@@ -60,13 +61,17 @@ def _parse_key_value(msg: str) -> {str, int | float}:
     value: int | float = _parse_num(msg[value_delim_pos+1:])
     return (key, value)
 
+def get_timestamp_ms() -> int:
+    global _program_start_time
+    return round((time.time() - _program_start_time) * 1000)
+
 def _publish(key: str, value: int | float) -> bool:
     if key not in _subscribers:
         return False
     for q in _subscribers[key]:
         if q.full():
             q.get_nowait()
-        q.put(value)
+        q.put((get_timestamp_ms(), value))
     return True
 
 def _buildCmdFrame(cmd: _CmdInstruction, tgt: _ParameterId, value: float | int | None = None) -> bytearray:
@@ -175,11 +180,11 @@ def _request_and_wait(id: _ParameterId, timeout = 0.05):
             accumulated_sleep += 0.01
         else:
             return 0
-    return _internal_queues[id].get()
+    return _internal_queues[id].get()[1]
 
 def start_motor():
     _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, 1))
-    
+
 def stop_motor():
     _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, 0))
 
