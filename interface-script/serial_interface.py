@@ -28,7 +28,7 @@ parameter_keys: dict = {_ParameterId.NONE: 'None',
 
 CMD_DELIMITER = b'\n'
 
-_serial_device: serial.Serial = serial.Serial()
+_serial_device: serial.Serial = serial.Serial(write_timeout = 0, timeout=1)
 _cmd_frame_queue = queue.Queue()
 _subscribers = dict(list())
 _program_start_time = time.time()
@@ -99,30 +99,51 @@ def _readSerialThread():
     while True:
         if(_serial_device.is_open):
             c = _serial_device.read().decode()
-            if c == ">": # Data point start delimiter
-                receiving_data_point = True
-            elif c == "\n" and receiving_data_point: # Data point end delimiter
-                receiving_data_point = False
-                # Parse data point into dict
-                # Expected string format: key: value\n
-                # The initial '>' char is not stored
-                k,v = _parse_key_value(data_point_msg)
-                # Publish to subscriber queues
-                _publish(k,v)
-                # reset data_point_msg
-                data_point_msg = ""
-            elif receiving_data_point:
-                # add char to data_point_msg while reicing data point
-                data_point_msg += c
+            
+            # read timeout check
+            if len(c) == 0:
+                try:
+                    # Try reopening connection
+                    _serial_device.close()
+                    _serial_device.open()
+                except serial.SerialException:
+                    time.sleep(0.1)
             else:
-                # Char is probably part of a log message. Just print it
-                print(f"{c}", end='')
+                if c == ">": # Data point start delimiter
+                    receiving_data_point = True
+                elif c == "\n" and receiving_data_point: # Data point end delimiter
+                    receiving_data_point = False
+                    # Parse data point into dict
+                    # Expected string format: key: value\n
+                    # The initial '>' char is not stored
+                    k,v = _parse_key_value(data_point_msg)
+                    # Publish to subscriber queues
+                    _publish(k,v)
+                    # reset data_point_msg
+                    data_point_msg = ""
+                elif receiving_data_point:
+                    # add char to data_point_msg while reicing data point
+                    data_point_msg += c
+                else:
+                    # Char is probably part of a log message. Just print it
+                    print(f"{c}", end='')
+        else:
+            try:
+                _serial_device.open()
+            except serial.SerialException:
+                time.sleep(0.5)
 
 def _writeSerialThread():
     while True:
         if(_serial_device.is_open):
             cmd = _cmd_frame_queue.get()
-            _serial_device.write(cmd)
+            write_successful = False
+            while not write_successful:
+                try:
+                    _serial_device.write(cmd)
+                    write_successful = True
+                except serial.PortNotOpenError:
+                    time.sleep(1)
             _cmd_frame_queue.task_done()
             time.sleep(0.01) # sleep 10ms between commands
 

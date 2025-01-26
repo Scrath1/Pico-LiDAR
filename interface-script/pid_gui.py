@@ -94,6 +94,9 @@ def create_gui() -> tk.Tk:
     ui_update_btn.grid(column=0, row=2, pady=20)
     
     set_spinbox_values(0,0,0, target_rpm_lower_limit)
+    
+    # Try to get some initial values
+    on_update_btn_press()
     return window
 
 def embed_plots(window: tk.Tk):
