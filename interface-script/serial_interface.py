@@ -57,9 +57,18 @@ def subscribe(key: str, max_size: int = 0) -> queue:
     return q
 
 def _parse_key_value(msg: str) -> {str, float}:
+    """Attempts to parse a string of format 'key:value'
+    
+    Returns
+        Tuple containing (key, value)
+        or (<empty str>, 0) in case of failure
+    """
     value_delim_pos: int = msg.find(":")
     key: str = msg[:value_delim_pos]
-    value: float = float(msg[value_delim_pos+1:])
+    try:
+        value: float = float(msg[value_delim_pos+1:])
+    except ValueError:
+        return ('', 0)
     return (key, value)
 
 def get_timestamp_ms() -> int:
@@ -75,7 +84,7 @@ def _publish(key: str, value: float) -> bool:
         q.put((get_timestamp_ms(), value))
     return True
 
-def _buildCmdFrame(cmd: _CmdInstruction, tgt: _ParameterId, value: float | int | None = None) -> bytearray:
+def _build_cmd_frame(cmd: _CmdInstruction, tgt: _ParameterId, value: float | int | None = None) -> bytearray:
     bytes = bytearray()
     bytes.append(cmd.value)
     bytes.extend(int(tgt.value).to_bytes(4))
@@ -117,8 +126,9 @@ def _readSerialThread():
                     # Expected string format: key: value\n
                     # The initial '>' char is not stored
                     k,v = _parse_key_value(data_point_msg)
-                    # Publish to subscriber queues
-                    _publish(k,v)
+                    if len(k) > 0:
+                        # Publish to subscriber queues
+                        _publish(k,v)
                     # reset data_point_msg
                     data_point_msg = ""
                 elif receiving_data_point:
@@ -147,7 +157,7 @@ def _writeSerialThread():
             _cmd_frame_queue.task_done()
             time.sleep(0.01) # sleep 10ms between commands
 
-def init_serial(port: str, baud: int):
+def init_serial(port: str, baud: int) -> bool:
     global _internal_queues
     for id in _ParameterId:
         key = parameter_keys[id]
@@ -155,7 +165,11 @@ def init_serial(port: str, baud: int):
 
     _serial_device.port = port
     _serial_device.baudrate = baud
-    _serial_device.open()
+    try:
+        _serial_device.open()
+    except serial.SerialException:
+        return False
+    
     
     serialRxThread = threading.Thread(target=_readSerialThread)
     serialRxThread.daemon = True # Marks thread to exit automatically when main thread exits
@@ -164,10 +178,11 @@ def init_serial(port: str, baud: int):
     serialTxThread = threading.Thread(target=_writeSerialThread)
     serialTxThread.daemon = True
     serialTxThread.start()
+    return True
 
 def _request_and_wait(id: _ParameterId, timeout: float = 0.2) -> float:
     cur_timestamp = get_timestamp_ms()
-    _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.GET, id))
+    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.GET, id))
     while True:
         try:
             # Search for a result that is newer than the request time
@@ -179,34 +194,40 @@ def _request_and_wait(id: _ParameterId, timeout: float = 0.2) -> float:
             return 0
 
 def start_motor():
-    _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, 1))
+    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, 1))
 
 def stop_motor():
-    _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, 0))
+    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, 0))
 
 def get_motor_state() -> bool:
     return bool(_request_and_wait(_ParameterId.ENABLE_MOTOR))
 
-def set_target_rpm(val: int):
-    _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.TARGET_RPM, val))
+def set_target_rpm(val: int | float):
+    intval: int = 0
+    if isinstance(val, int):
+        intval = val
+    else:
+        intval = int(val)
+    cmd_frame = _build_cmd_frame(_CmdInstruction.SET, _ParameterId.TARGET_RPM, intval)
+    _enqueueCmdFrame(cmd_frame)
 
 def get_target_rpm() -> int:
     return int(_request_and_wait(_ParameterId.TARGET_RPM))
 
 def set_kp(val: float):
-    _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.KP, val))
+    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.KP, val))
     
 def get_kp() -> float:
     return float(_request_and_wait(_ParameterId.KP))
     
 def set_ki(val: float):
-    _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.KI, val))
+    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.KI, val))
     
 def get_ki() -> float:
     return float(_request_and_wait(_ParameterId.KI))
 
 def set_kd(val: float):
-    _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.KD, val))
+    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.KD, val))
     
 def get_kd() -> float:
     return float(_request_and_wait(_ParameterId.KD))

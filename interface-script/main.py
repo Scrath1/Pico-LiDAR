@@ -31,7 +31,10 @@ def main():
 
     args = parser.parse_args(sys.argv[1:])
 
-    si.init_serial(args.port, args.baud)
+    if not si.init_serial(args.port, args.baud):
+        print("Failed to open serial port. Maybe it is already in use?")
+        exit()
+
     send_args(args)
     if(args.pid_gui):
         run_gui()
