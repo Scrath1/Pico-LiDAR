@@ -18,18 +18,56 @@ class _ParameterId(Enum):
     TARGET_RPM = 4
     ENABLE_MOTOR = 5
     
-parameter_keys: dict = {_ParameterId.KP: 'K_p',
+parameter_keys: dict = {_ParameterId.NONE: 'None',
+                        _ParameterId.KP: 'K_p',
                         _ParameterId.KI: 'K_i',
                         _ParameterId.KD: 'K_d',
                         _ParameterId.TARGET_RPM: 'targetRPM',
                         _ParameterId.ENABLE_MOTOR: 'enableMotor'}
-    
+
 CMD_DELIMITER = b'\n'
 
 _serial_device: serial.Serial = serial.Serial()
 _cmd_frame_queue = queue.Queue()
-_data_points = dict(list())
-_data_points_list_len_limit = 200
+_subscribers = dict(list())
+
+# Used for the getter functions to receive data from the serial read thread
+# _ParameterId is used as the key
+_internal_queues = dict()
+
+def subscribe(key: str, max_size: int = 0) -> queue:
+    """Subscribe to data messages with a specific key
+    When a message is received, it's parsed value is put into the
+    queue returned by this function.
+    
+    Args:
+        key (str): The data point key for which messages are
+            wanted.
+        max_size (int): Maximum size of queue. If the queue is full and new
+            data is available, the oldest data point is automatically removed
+    
+    """
+    q = queue.Queue(maxsize = max_size)
+    if key in _subscribers:
+        _subscribers[key].append(q)
+    else:
+        _subscribers[key] = [q]
+    return q
+
+def _parse_key_value(msg: str) -> {str, int | float}:
+    value_delim_pos: int = msg.find(":")
+    key: str = msg[:value_delim_pos]
+    value: int | float = _parse_num(msg[value_delim_pos+1:])
+    return (key, value)
+
+def _publish(key: str, value: int | float) -> bool:
+    if key not in _subscribers:
+        return False
+    for q in _subscribers[key]:
+        if q.full():
+            q.get_nowait()
+        q.put(value)
+    return True
 
 def _buildCmdFrame(cmd: _CmdInstruction, tgt: _ParameterId, value: float | int | None = None) -> bytearray:
     bytes = bytearray()
@@ -72,30 +110,6 @@ def _parse_num(candidate):
 
     return float_value
 
-def _parse_data_point(msg: str, tgt_dict: dict, list_size_limit: int):
-    """Parse a data point string of the format 'key: value\n'
-    and add it to a dict of lists
-    
-    Args:
-        msg (str): string to parse
-        tgt_dict (dict): dictionary containing lists of values for the
-            specific keys
-    Returns:
-        None
-    """
-    value_delim_pos: int = msg.find(":")
-    if value_delim_pos == -1:
-        return
-    key: str = msg[:value_delim_pos]
-    value: int | float = _parse_num(msg[value_delim_pos+1:])
-    if key in tgt_dict:
-        # Check if list length is at or over size limit
-        if len(tgt_dict[key]) >= list_size_limit:
-            tgt_dict[key].pop(0)
-        tgt_dict[key].append(value)
-    else:
-        tgt_dict[key] = [value]
-
 def _readSerialThread():
     receiving_data_point = False
     data_point_msg: str = str()
@@ -109,7 +123,9 @@ def _readSerialThread():
                 # Parse data point into dict
                 # Expected string format: key: value\n
                 # The initial '>' char is not stored
-                _parse_data_point(data_point_msg, _data_points, _data_points_list_len_limit)
+                k,v = _parse_key_value(data_point_msg)
+                # Publish to subscriber queues
+                _publish(k,v)
                 # reset data_point_msg
                 data_point_msg = ""
             elif receiving_data_point:
@@ -128,6 +144,11 @@ def _writeSerialThread():
             time.sleep(0.01) # sleep 10ms between commands
 
 def init_serial(port: str, baud: int):
+    global _internal_queues
+    for id in _ParameterId:
+        key = parameter_keys[id]
+        _internal_queues[id] = subscribe(key, 5)
+
     _serial_device.port = port
     _serial_device.baudrate = baud
     _serial_device.open()
@@ -140,25 +161,21 @@ def init_serial(port: str, baud: int):
     serialTxThread.daemon = True
     serialTxThread.start()
 
-def _get_list_size_in_dict(key: str, dict):
-    if key in dict:
-        return len(dict[key])
-    else:
-        return -1
-    
-def _request_and_wait(id: _ParameterId, timeout = 0.2):
-    key = parameter_keys[id]
-    list_size = _get_list_size_in_dict(key, _data_points)
+def _request_and_wait(id: _ParameterId, timeout = 0.05):
+    queue_len = _internal_queues[id].qsize()
+    if queue_len == _internal_queues[id].maxsize:
+        _internal_queues[id].get()
+        queue_len -= 1
     _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.GET, id))
-    
+
     accumulated_sleep = 0
-    while list_size == _get_list_size_in_dict(key, _data_points):
+    while queue_len == _internal_queues[id].qsize():
         if accumulated_sleep < timeout:
             time.sleep(0.01)
             accumulated_sleep += 0.01
         else:
             return 0
-    return _data_points[key][-1] # Return latest value from list
+    return _internal_queues[id].get()
 
 def start_motor():
     _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, 1))
@@ -167,15 +184,13 @@ def stop_motor():
     _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, 0))
 
 def get_motor_state() -> bool:
-    val = _request_and_wait(_ParameterId.ENABLE_MOTOR)
-    return bool(val)
+    return bool(_request_and_wait(_ParameterId.ENABLE_MOTOR))
 
 def set_target_rpm(val: int):
     _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.TARGET_RPM, val))
 
 def get_target_rpm() -> int:
-    val = _request_and_wait(_ParameterId.TARGET_RPM)
-    return int(val)
+    return int(_request_and_wait(_ParameterId.TARGET_RPM))
 
 def set_kp(val: float):
     _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.KP, val))
