@@ -3,13 +3,12 @@ from tkinter import ttk
 import queue
 import serial_interface as si
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,  
-NavigationToolbar2Tk) 
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 target_rpm_lower_limit = 50
 target_rpm_upper_limit = 1000
 
-max_data_points = 500
+max_data_points = 200
 
 measured_rpm_queue = queue.Queue()
 measured_rpm = list()
@@ -139,12 +138,20 @@ def update_plots():
     canvas.draw()
 
 def run_gui():
+    running: bool = True
+    def on_closing():
+        nonlocal running
+        running = False
+        window.destroy()
+
     global measured_rpm_queue, target_rpm_queue
     measured_rpm_queue = si.subscribe("measuredRPM", 200)
     target_rpm_queue = si.subscribe("targetRPM", 200)
     window = create_gui()
     embed_plots(window)
-    while True:
+    
+    window.protocol("WM_DELETE_WINDOW", on_closing)
+    while running:
         update_plots()
         window.update_idletasks()
         window.update()

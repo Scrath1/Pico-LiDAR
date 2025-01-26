@@ -4,6 +4,7 @@ import threading
 import queue
 import struct
 import time
+import yaml
 
 class _CmdInstruction(Enum):
     NONE = 0
@@ -55,17 +56,17 @@ def subscribe(key: str, max_size: int = 0) -> queue:
         _subscribers[key] = [q]
     return q
 
-def _parse_key_value(msg: str) -> {str, int | float}:
+def _parse_key_value(msg: str) -> {str, float}:
     value_delim_pos: int = msg.find(":")
     key: str = msg[:value_delim_pos]
-    value: int | float = _parse_num(msg[value_delim_pos+1:])
+    value: float = float(msg[value_delim_pos+1:])
     return (key, value)
 
 def get_timestamp_ms() -> int:
     global _program_start_time
     return round((time.time() - _program_start_time) * 1000)
 
-def _publish(key: str, value: int | float) -> bool:
+def _publish(key: str, value: float) -> bool:
     if key not in _subscribers:
         return False
     for q in _subscribers[key]:
@@ -91,29 +92,6 @@ def _buildCmdFrame(cmd: _CmdInstruction, tgt: _ParameterId, value: float | int |
 
 def _enqueueCmdFrame(b: bytearray):
     _cmd_frame_queue.put(b)
-
-# Source: https://stackoverflow.com/questions/379906/how-do-i-parse-a-string-to-a-float-or-int
-def _parse_num(candidate):
-    """Parse string to number if possible
-    It work equally well with negative and positive numbers, integers and floats.
-
-    Args:
-        candidate (str): string to convert
-
-    Returns:
-        float | int | None: float or int if possible otherwise None
-    """
-    try:
-        float_value = float(candidate)
-    except ValueError:
-        return None
-
-    # Optional part if you prefer int to float when decimal part is 0
-    if float_value.is_integer():
-        return int(float_value)
-    # end of the optional part
-
-    return float_value
 
 def _readSerialThread():
     receiving_data_point = False
@@ -166,21 +144,18 @@ def init_serial(port: str, baud: int):
     serialTxThread.daemon = True
     serialTxThread.start()
 
-def _request_and_wait(id: _ParameterId, timeout = 0.05):
-    queue_len = _internal_queues[id].qsize()
-    if queue_len == _internal_queues[id].maxsize:
-        _internal_queues[id].get()
-        queue_len -= 1
+def _request_and_wait(id: _ParameterId, timeout: float = 0.2) -> float:
+    cur_timestamp = get_timestamp_ms()
     _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.GET, id))
-
-    accumulated_sleep = 0
-    while queue_len == _internal_queues[id].qsize():
-        if accumulated_sleep < timeout:
-            time.sleep(0.01)
-            accumulated_sleep += 0.01
-        else:
+    while True:
+        try:
+            # Search for a result that is newer than the request time
+            ts, val = _internal_queues[id].get(timeout = timeout)
+            if ts > cur_timestamp:
+                return val
+        except queue.Empty:
+            # If no result was found after the queue timed out once, return 0
             return 0
-    return _internal_queues[id].get()[1]
 
 def start_motor():
     _enqueueCmdFrame(_buildCmdFrame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, 1))

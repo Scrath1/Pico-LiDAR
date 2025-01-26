@@ -172,19 +172,19 @@ bool cmd_get(runtime_settings_signal_t& settings, const uint8_t* frame, const ui
             ULOG_ERROR("Variable ID NONE received");
             return false;
         case ID_KP:
-            Serial.printf(">K_p: %f\n", rts.pid_controller.kp);
+            Serial.printf(">K_p:%f\n", rts.pid_controller.kp);
             break;
         case ID_KI:
-            Serial.printf(">K_i: %f\n", rts.pid_controller.ki);
+            Serial.printf(">K_i:%f\n", rts.pid_controller.ki);
             break;
         case ID_KD:
-            Serial.printf(">K_d: %f\n", rts.pid_controller.kd);
+            Serial.printf(">K_d:%f\n", rts.pid_controller.kd);
             break;
         case ID_TARGET_RPM:
-            Serial.printf(">targetRPM: %lu\n", rts.pid_controller.targetRPM);
+            Serial.printf(">targetRPM:%lu\n", rts.pid_controller.targetRPM);
             break;
         case ID_ENABLE_MOTOR:
-            Serial.printf(">enableMotor: %u\n", rts.enableMotor);
+            Serial.printf(">enableMotor:%u\n", rts.enableMotor);
             break;
     }
     return true;
