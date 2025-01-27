@@ -14,6 +14,7 @@
 #include "tasks/motor_control_task.h"
 #include "tasks/signal_age_check_task.h"
 #include "tasks/serial_interface_task.h"
+#include "tasks/sensor_task.h"
 #include "averaging_filter.h"
 
 #define SIGNAL_LOCK_TIMEOUT 50
@@ -205,6 +206,17 @@ void setup() {
         configASSERT(false);
     }
     vTaskCoreAffinitySet(signalAgeCheckTaskHandle, (1<<0));
+    sensorTaskParams_t sensorTskParams = {
+        .measuredRPMSignal = measuredRPMSignal,
+        .runtimeSettingsSignal = rtSettingsSignal
+    };
+    if(pdPASS != xTaskCreate(sensorTask, SENSOR_TASK_NAME,
+                             SENSOR_TASK_STACK_SIZE, (void*)&sensorTskParams,
+                             SENSOR_TASK_PRIORITY, &sensorTaskHandle)) {
+        ULOG_CRITICAL("Failed to create sensor task");
+        configASSERT(false);
+    }
+    vTaskCoreAffinitySet(sensorTaskHandle, (1<<0));
 
     ULOG_TRACE("Setup finished");
     vTaskDelete(NULL);
