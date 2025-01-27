@@ -115,8 +115,6 @@ void gpio_callback(uint gpio, uint32_t events) {
 }
 
 void configurePins(){
-    pinMode(PIN_POTENTIOMETER, INPUT);
-    pinMode(PIN_SWITCH_LEFT, INPUT);
     pinMode(PIN_PUSHBTN_LEFT, INPUT);
     pinMode(PIN_LED_USER, OUTPUT);
     digitalWrite(PIN_LED_USER, 1);

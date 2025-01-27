@@ -80,7 +80,7 @@ void motorControlTask(void* pvParameters) {
             targetRPM.rpm = 0;
         }
 
-        if(digitalRead(PIN_SWITCH_LEFT) && rtSettings.enableMotor && measuredRPMSuccess) {
+        if(rtSettings.enableMotor && measuredRPMSuccess) {
             pwm = (uint8_t)spid_process(&pid, (float)rtSettings.pid_controller.targetRPM, measuredRPM.rpm);
         }
         pwm_set_chan_level(pwmSliceNum, pwmChannelNum, pwm);
