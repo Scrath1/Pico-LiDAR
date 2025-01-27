@@ -14,6 +14,7 @@ void signalAgeCheckTask(void* pvParameters){
         assert(false);
     }
     rpm_signal_t& measuredRPMSignal = ((signalAgeCheckTaskParams_t*)pvParameters)->measuredRPMSignal;
+    dome_angle_signal_t& domeAngleSignal = ((signalAgeCheckTaskParams_t*)pvParameters)->domeAngleSignal;
     
     TickType_t lastWakeTime = xTaskGetTickCount();
     ULOG_TRACE("Starting signal age check task loop");
@@ -25,6 +26,9 @@ void signalAgeCheckTask(void* pvParameters){
             if(measuredRPMAge_ms > SIGNAL_MEASURED_RPM_AGE_THRESHOLD_MS){
                 // measuredRPM signal is too old. Reset to 0
                 measuredRPMSignal.write({.rpm = 0}, SIGNAL_LOCK_TIMEOUT);
+                // also reset the dome angle signal since it is directly
+                // dependent on the motor spinning
+                domeAngleSignal.write({.angleBase = 0, .timeOfAngleIncrement_us = time_us_32()}, SIGNAL_LOCK_TIMEOUT);
             }
         }
 

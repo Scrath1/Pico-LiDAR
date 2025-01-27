@@ -27,6 +27,7 @@ AVERAGING_FILTER_DEF(targetRPMFilter, TARGET_RPM_FILTER_SIZE);
 
 rpm_signal_t measuredRPMSignal;
 runtime_settings_signal_t rtSettingsSignal;
+dome_angle_signal_t domeAngleSignal;
 
 void consoleLogger(ulog_level_t severity, char* msg) {
     char fmsg[256];
@@ -47,8 +48,31 @@ void hallSensorISR(uint32_t events, BaseType_t& xHigherPriorityTaskWoken){
         // points to next index to write to
         static uint32_t pulseIntervalsNextIdx = 0;
 
+        // immediately acquire timestamp of pulse
+        const uint32_t currentTime_us = time_us_32();
+
         // signal detection using LED
         digitalWrite(PIN_LED_USER, 0);
+
+        // counter for pulses which previously couldn't be written back for some reason
+        static uint32_t domeAngleRWFails = 0;
+        // update base angle for angle position determination
+        bool daSuccess = false;
+        angle_position_t da = domeAngleSignal.readFromISR(daSuccess, &xHigherPriorityTaskWoken);
+        if(daSuccess){
+            const uint16_t anglePulseIncrement = 360 / PULSES_PER_REV;
+            uint16_t newAngleBase = (da.angleBase + anglePulseIncrement) + (domeAngleRWFails * anglePulseIncrement);
+            angle_position_t newAngPos = {.angleBase = newAngleBase, .timeOfAngleIncrement_us = currentTime_us};
+            // write back new value
+            if(domeAngleSignal.writeFromISR(newAngPos, &xHigherPriorityTaskWoken)){
+                // reset missed pulse counter on successful writeback
+                domeAngleRWFails = 0;
+            }
+        }
+        else{
+            domeAngleRWFails += 1;
+        }
+        
 
         // initialize variable before measuring
         if(lastPulseTime_us == 0){
@@ -56,7 +80,6 @@ void hallSensorISR(uint32_t events, BaseType_t& xHigherPriorityTaskWoken){
             return;
         }
         // calculate time between the last 2 magnetic pulses
-        const uint32_t currentTime_us = time_us_32();
         const uint32_t interval_us = currentTime_us - lastPulseTime_us;
         lastPulseTime_us = currentTime_us;
 
@@ -168,9 +191,11 @@ void setup() {
             .kd = K_D,
             .targetRPM = MOTOR_TARGET_SPEED,
         },
-        .enableMotor = false
+        .enableMotor = false,
         .stableTargetRPM = false
     }, 0);
+    domeAngleSignal.init();
+    domeAngleSignal.write({.angleBase = 0, .timeOfAngleIncrement_us = 0}, 0);
 
     // create tasks
     ULOG_TRACE("Creating tasks");
@@ -185,7 +210,8 @@ void setup() {
     }
     vTaskCoreAffinitySet(motorCtrlTaskHandle, (1<<0));
     signalAgeCheckTaskParams_t sigAgeChkTskParams = {
-        .measuredRPMSignal = measuredRPMSignal
+        .measuredRPMSignal = measuredRPMSignal,
+        .domeAngleSignal = domeAngleSignal
     };
     if(pdPASS != xTaskCreate(signalAgeCheckTask, SIGNAL_AGE_CHECK_TASK_NAME,
                              SIGNAL_AGE_CHECK_TASK_STACK_SIZE, (void*)&sigAgeChkTskParams,
@@ -207,7 +233,8 @@ void setup() {
     vTaskCoreAffinitySet(signalAgeCheckTaskHandle, (1<<0));
     sensorTaskParams_t sensorTskParams = {
         .measuredRPMSignal = measuredRPMSignal,
-        .runtimeSettingsSignal = rtSettingsSignal
+        .runtimeSettingsSignal = rtSettingsSignal,
+        .domeAngleSignal = domeAngleSignal
     };
     if(pdPASS != xTaskCreate(sensorTask, SENSOR_TASK_NAME,
                              SENSOR_TASK_STACK_SIZE, (void*)&sensorTskParams,

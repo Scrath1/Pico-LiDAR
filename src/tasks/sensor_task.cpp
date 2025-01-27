@@ -8,6 +8,9 @@
 #define VL53L0X_TIMEOUT_MS (50)
 #define TEST_TASK_INTERVAL_TODO_CHANGE (30)
 
+#define SIGNAL_LOCK_TIME_RELAXED (50)
+#define SIGNAL_LOCK_TIME_CRITICAL (2)
+
 TaskHandle_t sensorTaskHandle;
 
 void sensorTask(void* pvParameters){
@@ -18,13 +21,20 @@ void sensorTask(void* pvParameters){
     }
     rpm_signal_t& measuredRPMSignal = ((sensorTaskParams_t*)pvParameters)->measuredRPMSignal;
     runtime_settings_signal_t& rtSettingsSignal = ((sensorTaskParams_t*)pvParameters)->runtimeSettingsSignal;
-    
+    dome_angle_signal_t& domeAngleSignal = ((sensorTaskParams_t*)pvParameters)->domeAngleSignal;
     VL53L0X vl53l0x;
     Wire.begin();
     vl53l0x.setTimeout(VL53L0X_TIMEOUT_MS);
     while(!vl53l0x.init()){
         ULOG_ERROR("Failed to initialize VL53L0X sensor. Retrying in 500ms");
         vTaskDelay(pdMS_TO_TICKS(500));
+    }
+    bool rtsSuccess = false;
+    runtime_settings_t rts;
+    uint32_t lastRtsUpdate_ms = 0;
+    while(!rtsSuccess){
+        rts = rtSettingsSignal.read(rtsSuccess, SIGNAL_LOCK_TIME_RELAXED);
+        lastRtsUpdate_ms = rtSettingsSignal.getLastUpdateTime_ms();
     }
 
     // undecided whether to use single shot or continuous mode
@@ -52,15 +62,28 @@ void sensorTask(void* pvParameters){
     TickType_t lastWakeTime = xTaskGetTickCount();
     ULOG_TRACE("Starting sensor task loop");
     for(;;){
-        uint16_t range_mm = vl53l0x.readRangeSingleMillimeters();
-        if(vl53l0x.timeoutOccurred()){
-            ULOG_WARNING("VL53L0X read timeout");
+        if(lastRtsUpdate_ms != rtSettingsSignal.getLastUpdateTime_ms()){
+            rts = rtSettingsSignal.read(rtsSuccess, SIGNAL_LOCK_TIME_CRITICAL);
         }
-        else{
+
+        uint16_t range_mm = vl53l0x.readRangeSingleMillimeters();
+        // get angle of measurement
+        bool success = false;
+        angle_position_t anglePos = domeAngleSignal.read(success, SIGNAL_LOCK_TIME_CRITICAL);
+        int16_t currentAngle = -1;
+        if(rts.stableTargetRPM){
+            currentAngle = anglePos.calculateCurrentAngle(rts.pid_controller.targetRPM);
+        }
+        if(success){
+            if(vl53l0x.timeoutOccurred()){
+                ULOG_WARNING("VL53L0X read timeout");
+            }
+            else{
                 SERIAL_PORT.print(">VL53L0X:");
                 SERIAL_PORT.println(range_mm);
                 SERIAL_PORT.print(">VL53L0X_angle:");
                 SERIAL_PORT.println(currentAngle);
+            }
         }
 
         if(pdFALSE == xTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(TEST_TASK_INTERVAL_TODO_CHANGE))){

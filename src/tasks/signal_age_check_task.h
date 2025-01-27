@@ -16,6 +16,7 @@
 
 typedef struct {
     rpm_signal_t& measuredRPMSignal;
+    dome_angle_signal_t& domeAngleSignal;
 } signalAgeCheckTaskParams_t;
 
 extern TaskHandle_t signalAgeCheckTaskHandle;

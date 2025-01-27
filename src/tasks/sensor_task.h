@@ -18,6 +18,7 @@
 typedef struct {
     rpm_signal_t& measuredRPMSignal;
     runtime_settings_signal_t& runtimeSettingsSignal;
+    dome_angle_signal_t& domeAngleSignal;
 } sensorTaskParams_t;
 
 extern TaskHandle_t sensorTaskHandle;
