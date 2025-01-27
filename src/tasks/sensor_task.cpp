@@ -26,8 +26,8 @@ void sensorTask(void* pvParameters){
     Wire.begin();
     vl53l0x.setTimeout(VL53L0X_TIMEOUT_MS);
     while(!vl53l0x.init()){
-        ULOG_ERROR("Failed to initialize VL53L0X sensor. Retrying in 500ms");
-        vTaskDelay(pdMS_TO_TICKS(500));
+        ULOG_ERROR("Failed to initialize VL53L0X sensor. Retrying in 1s");
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
     bool rtsSuccess = false;
     runtime_settings_t rts;
@@ -80,9 +80,10 @@ void sensorTask(void* pvParameters){
             }
             else{
                 SERIAL_PORT.print(">VL53L0X:");
-                SERIAL_PORT.println(range_mm);
-                SERIAL_PORT.print(">VL53L0X_angle:");
-                SERIAL_PORT.println(currentAngle);
+                SERIAL_PORT.print(currentAngle);
+                SERIAL_PORT.print(":");
+                SERIAL_PORT.print(range_mm);
+                SERIAL_PORT.println("|np"); // flag for teleplot to not plot this value
             }
         }
 

@@ -4,7 +4,6 @@ import threading
 import queue
 import struct
 import time
-import yaml
 
 class _CmdInstruction(Enum):
     NONE = 0
@@ -56,26 +55,39 @@ def subscribe(key: str, max_size: int = 0) -> queue:
         _subscribers[key] = [q]
     return q
 
-def _parse_key_value(msg: str) -> {str, float}:
-    """Attempts to parse a string of format 'key:value'
-    
+def _parse_key_values(msg: str) -> tuple[str, float | list[float]]:
+    """Attempts to parse a string of format 'key:value0:value1:...:value_n|*'
+        The string is parsed into a tu0ple with the first index being the key
+        followed by either a float or a list of floats depending on the
+        number of values in the string.
+        String parts after the '|' symbol in the msg string are ignored.
     Returns
-        Tuple containing (key, value)
+        Tuple containing (key, value|values)
         or (<empty str>, 0) in case of failure
     """
-    value_delim_pos: int = msg.find(":")
-    key: str = msg[:value_delim_pos]
-    try:
-        value: float = float(msg[value_delim_pos+1:])
-    except ValueError:
+    vals = list()
+    substrs = msg.split(":")
+    if len(substrs) < 2:
         return ('', 0)
-    return (key, value)
+    key = substrs[0]
+    for v in substrs[1:]:
+        end_pos = v.find("|")
+        if end_pos == -1:
+            end_pos = len(v)
+        try:
+            vals.append(float(v[:end_pos]))
+        except ValueError:
+            return ('', 0)
+    if len(vals) == 1:
+        return (key, vals[0])
+    else:
+        return (key, vals)
 
 def get_timestamp_ms() -> int:
     global _program_start_time
     return round((time.time() - _program_start_time) * 1000)
 
-def _publish(key: str, value: float) -> bool:
+def _publish(key: str, value: float | list[float]) -> bool:
     if key not in _subscribers:
         return False
     for q in _subscribers[key]:
@@ -125,7 +137,7 @@ def _readSerialThread():
                     # Parse data point into dict
                     # Expected string format: key: value\n
                     # The initial '>' char is not stored
-                    k,v = _parse_key_value(data_point_msg)
+                    k,v = _parse_key_values(data_point_msg)
                     if len(k) > 0:
                         # Publish to subscriber queues
                         _publish(k,v)
