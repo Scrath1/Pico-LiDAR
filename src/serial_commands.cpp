@@ -1,6 +1,6 @@
 #include "serial_commands.h"
-#include <Arduino.h>
 #include "prj_config.h"
+#include <Arduino.h>
 
 #include "ulog.h"
 
@@ -13,9 +13,9 @@ bool parseCommand(runtime_settings_signal_t& settings, const uint8_t* frame, uin
     }
 
     // print received frame
-    // Serial.print("\n");
+    // SERIAL.print("\n");
     // for(uint32_t i = 0; i < frameSize; i++){
-    //     Serial.printf("%.2X", frame[i]);
+    //     SERIAL.printf("%.2X", frame[i]);
     // }
 
     // we should have n*4+2 bytes in the frame.
@@ -172,19 +172,19 @@ bool cmd_get(runtime_settings_signal_t& settings, const uint8_t* frame, const ui
             ULOG_ERROR("Variable ID NONE received");
             return false;
         case ID_KP:
-            Serial.printf(">K_p:%f\n", rts.pid_controller.kp);
+            SERIAL_PORT.printf(">K_p:%f\n", rts.pid_controller.kp);
             break;
         case ID_KI:
-            Serial.printf(">K_i:%f\n", rts.pid_controller.ki);
+            SERIAL_PORT.printf(">K_i:%f\n", rts.pid_controller.ki);
             break;
         case ID_KD:
-            Serial.printf(">K_d:%f\n", rts.pid_controller.kd);
+            SERIAL_PORT.printf(">K_d:%f\n", rts.pid_controller.kd);
             break;
         case ID_TARGET_RPM:
-            Serial.printf(">targetRPM:%lu\n", rts.pid_controller.targetRPM);
+            SERIAL_PORT.printf(">targetRPM:%lu\n", rts.pid_controller.targetRPM);
             break;
         case ID_ENABLE_MOTOR:
-            Serial.printf(">enableMotor:%u\n", rts.enableMotor);
+            SERIAL_PORT.printf(">enableMotor:%u\n", rts.enableMotor);
             break;
     }
     return true;

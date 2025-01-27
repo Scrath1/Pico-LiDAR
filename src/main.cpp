@@ -32,7 +32,7 @@ void consoleLogger(ulog_level_t severity, char* msg) {
     char fmsg[256];
     uint32_t len = snprintf(fmsg, sizeof(fmsg), "%10lu [%s]: %s\n", pdTICKS_TO_MS(xTaskGetTickCount()),
                             ulog_level_name(severity), msg);
-    Serial.print(fmsg);
+    SERIAL_PORT.print(fmsg);
 }
 
 void hallSensorISR(uint32_t events, BaseType_t& xHigherPriorityTaskWoken){
@@ -144,9 +144,9 @@ void setup() {
     ULOG_SUBSCRIBE(consoleLogger, ULOG_TRACE_LEVEL);
 
     // Set up serial
-    Serial.setTX(0);
-    Serial.setRX(1);
-    Serial.begin(115200);
+    SERIAL_PORT.setTX(0);
+    SERIAL_PORT.setRX(1);
+    SERIAL_PORT.begin(115200);
 
     averaging_filter_init(&hallIntervalFilter);
     averaging_filter_init(&measuredRPMFilter);

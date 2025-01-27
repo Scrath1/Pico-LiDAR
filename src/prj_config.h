@@ -14,7 +14,7 @@
 
 // COMMUNICATION
 // ==============================================================
-#define Serial Serial1
+#define SERIAL_PORT Serial1
 
 // MOTOR CONTROL CONFIGURATIONS
 // ==============================================================

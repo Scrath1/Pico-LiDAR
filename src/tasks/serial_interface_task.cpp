@@ -45,8 +45,8 @@ void serialInterfaceTask(void* pvParameters){
         uint32_t currentTime_ms = xTaskGetTickCount();
 
         // Handle incoming data
-        while(Serial.available() > 0){
-            char c = Serial.read();
+        while(SERIAL_PORT.available() > 0){
+            char c = SERIAL_PORT.read();
             if(fillLevel < SERIAL_CMD_INPUT_BUFFER_SIZE){
                 cmdInputBuffer[fillLevel++] = c;
             }
@@ -81,16 +81,16 @@ void serialInterfaceTask(void* pvParameters){
             runtime_settings_t rts = rtSettingsSignal.read(successRtsRead, SIGNAL_LOCK_TIMEOUT_MS);
             rpm_data_t measuredRPM = measuredRPMSignal.read(successMeasuredRPMRead, SIGNAL_LOCK_TIMEOUT_MS);
             if(successRtsRead && successMeasuredRPMRead){
-                Serial.print(">targetRPM:");
-                Serial.println(rts.pid_controller.targetRPM);
-                Serial.print(">measuredRPM:");
-                Serial.println(measuredRPM.rpm);
-                // Serial.print(">PWM:");
-                // Serial.println(pwm);
-                Serial.print(">wErr:");
-                Serial.println(measuredRPMSignal.writeErrCnt);
-                Serial.print(">rErr:");
-                Serial.println(measuredRPMSignal.readErrCnt);
+                SERIAL_PORT.print(">targetRPM:");
+                SERIAL_PORT.println(rts.pid_controller.targetRPM);
+                SERIAL_PORT.print(">measuredRPM:");
+                SERIAL_PORT.println(measuredRPM.rpm);
+                // SERIAL_PORT.print(">PWM:");
+                // SERIAL_PORT.println(pwm);
+                SERIAL_PORT.print(">wErr:");
+                SERIAL_PORT.println(measuredRPMSignal.writeErrCnt);
+                SERIAL_PORT.print(">rErr:");
+                SERIAL_PORT.println(measuredRPMSignal.readErrCnt);
                 // update timestamp of last transmission
                 timestampLastPlotDataTansmission_ms = currentTime_ms;
             }

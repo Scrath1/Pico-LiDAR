@@ -57,8 +57,10 @@ void sensorTask(void* pvParameters){
             ULOG_WARNING("VL53L0X read timeout");
         }
         else{
-            Serial.print(">VL53L0X:");
-            Serial.println(range_mm);
+                SERIAL_PORT.print(">VL53L0X:");
+                SERIAL_PORT.println(range_mm);
+                SERIAL_PORT.print(">VL53L0X_angle:");
+                SERIAL_PORT.println(currentAngle);
         }
 
         if(pdFALSE == xTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(TEST_TASK_INTERVAL_TODO_CHANGE))){
