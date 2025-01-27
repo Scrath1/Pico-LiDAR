@@ -36,6 +36,13 @@
 #define PID_MAX_OUT (255)
 // Maximum PID constant value for error checking purposes
 #define PID_CONSTANT_MAX (10)
+// Number of PID intervals over which the measured RPM has to be relatively
+// constant before being declared stable
+#define MEASURED_RPM_STABILITY_INTERVAL_COUNT (5)
+// the +- range by which the measured RPM may differ from the
+// target RPM over MEASURED_RPM_STABILITY_INTERVAL_COUNT PID control
+// intervals for the speed to be considered stable
+#define MEASURED_RPM_TOLERANCE_PERCENT (0.025)
 
 // MOTOR SPEED MEASUREMENT CONFIGURATIONS
 // ==============================================================

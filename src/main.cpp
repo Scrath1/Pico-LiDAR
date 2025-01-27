@@ -169,6 +169,7 @@ void setup() {
             .targetRPM = MOTOR_TARGET_SPEED,
         },
         .enableMotor = false
+        .stableTargetRPM = false
     }, 0);
 
     // create tasks
