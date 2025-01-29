@@ -2,6 +2,7 @@
 #include <ulog.h>
 
 #include "prj_config.h"
+#include "global.h"
 
 #define SIGNAL_LOCK_TIMEOUT 5
 
@@ -9,27 +10,15 @@ TaskHandle_t signalAgeCheckTaskHandle;
 
 void signalAgeCheckTask(void* pvParameters){
     ULOG_TRACE("Starting signal age check task");
-    if(NULL == pvParameters){
-        ULOG_CRITICAL("Failed to retrieve signal age check task params");
-        assert(false);
-    }
-    rpm_signal_t& measuredRPMSignal = ((signalAgeCheckTaskParams_t*)pvParameters)->measuredRPMSignal;
-    dome_angle_signal_t& domeAngleSignal = ((signalAgeCheckTaskParams_t*)pvParameters)->domeAngleSignal;
-    
     TickType_t lastWakeTime = xTaskGetTickCount();
     ULOG_TRACE("Starting signal age check task loop");
     for(;;){
-        bool measuredRPMSuccess = false;
-        uint32_t measuredRPMAge_ms = 0;
-        measuredRPMSignal.read(measuredRPMSuccess, SIGNAL_LOCK_TIMEOUT, measuredRPMAge_ms);
-        if(measuredRPMSuccess){
-            if(measuredRPMAge_ms > SIGNAL_MEASURED_RPM_AGE_THRESHOLD_MS){
-                // measuredRPM signal is too old. Reset to 0
-                measuredRPMSignal.write({.rpm = 0}, SIGNAL_LOCK_TIMEOUT);
-                // also reset the dome angle signal since it is directly
-                // dependent on the motor spinning
-                domeAngleSignal.write({.angleBase = 0, .timeOfAngleIncrement_us = time_us_32()}, SIGNAL_LOCK_TIMEOUT);
-            }
+        if(status.measuredRPM.getAge_ms() > SIGNAL_MEASURED_RPM_AGE_THRESHOLD_MS){
+            // measuredRPM signal is too old. Reset to 0
+            status.measuredRPM.set(0);
+            // also reset the dome angle signal since it is directly
+            // dependent on the motor spinning
+            status.domeAngle = dome_angle_t{.angleBase = 0, . timeOfAngleIncrement_us = time_us_32()};
         }
 
         xTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(SIGNAL_AGE_CHECK_INTERVAL_MS));

@@ -2,7 +2,6 @@
 #define SERIAL_COMMANDS_H
 
 #include <cstdint>
-#include "signals/signal_types.h"
 
 #define CMD_END_DELIMITER ('\n')
 
@@ -45,10 +44,10 @@ typedef struct{
  * and tries to parse it. Depending on the command found, the frame is
  * passed to the corresponding function
  */
-bool parseCommand(runtime_settings_signal_t& settings, const uint8_t* frame, uint8_t frameSize);
+bool parseCommand(const uint8_t* frame, uint8_t frameSize);
 
-bool cmd_set(runtime_settings_signal_t& settings, const uint8_t* frame, const uint32_t frameSize);
+bool cmd_set(const uint8_t* frame, const uint32_t frameSize);
 
-bool cmd_get(runtime_settings_signal_t& settings, const uint8_t* frame, const uint32_t frameSize);
+bool cmd_get(const uint8_t* frame, const uint32_t frameSize);
 
 #endif // SERIAL_COMMANDS_H

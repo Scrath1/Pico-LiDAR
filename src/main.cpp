@@ -9,7 +9,7 @@
 
 #include "macros.h"
 #include "prj_config.h"
-#include "signals/signal_types.h"
+#include "global.h"
 #include "spid.h"
 #include "tasks/motor_control_task.h"
 #include "tasks/signal_age_check_task.h"
@@ -25,9 +25,6 @@ AVERAGING_FILTER_DEF(hallIntervalFilter, 4);
 AVERAGING_FILTER_DEF(measuredRPMFilter, RPM_AVERAGING_FILTER_SIZE);
 AVERAGING_FILTER_DEF(targetRPMFilter, TARGET_RPM_FILTER_SIZE);
 
-rpm_signal_t measuredRPMSignal;
-runtime_settings_signal_t rtSettingsSignal;
-dome_angle_signal_t domeAngleSignal;
 
 void consoleLogger(ulog_level_t severity, char* msg) {
     char fmsg[256];
@@ -36,7 +33,7 @@ void consoleLogger(ulog_level_t severity, char* msg) {
     SERIAL_PORT.print(fmsg);
 }
 
-void hallSensorISR(uint32_t events, BaseType_t& xHigherPriorityTaskWoken){
+void hallSensorISR(uint32_t events){
     if(events & GPIO_IRQ_EDGE_RISE){
         // signal detection visualization using LED
         digitalWrite(PIN_LED_USER, LED_OFF);
@@ -54,25 +51,13 @@ void hallSensorISR(uint32_t events, BaseType_t& xHigherPriorityTaskWoken){
         // signal detection using LED
         digitalWrite(PIN_LED_USER, 0);
 
-        // counter for pulses which previously couldn't be written back for some reason
-        static uint32_t domeAngleRWFails = 0;
-        // update base angle for angle position determination
-        bool daSuccess = false;
-        angle_position_t da = domeAngleSignal.readFromISR(daSuccess, &xHigherPriorityTaskWoken);
-        if(daSuccess){
-            const uint16_t anglePulseIncrement = 360 / PULSES_PER_REV;
-            uint16_t newAngleBase = (da.angleBase + anglePulseIncrement) + (domeAngleRWFails * anglePulseIncrement);
-            angle_position_t newAngPos = {.angleBase = newAngleBase, .timeOfAngleIncrement_us = currentTime_us};
-            // write back new value
-            if(domeAngleSignal.writeFromISR(newAngPos, &xHigherPriorityTaskWoken)){
-                // reset missed pulse counter on successful writeback
-                domeAngleRWFails = 0;
-            }
-        }
-        else{
-            domeAngleRWFails += 1;
-        }
-        
+        // read
+        dome_angle_t da = status.domeAngle;
+        // modify
+        uint16_t newAngleBase = (da.angleBase + (360 / PULSES_PER_REV));
+        dome_angle_t newAngPos = {.angleBase = newAngleBase, .timeOfAngleIncrement_us = currentTime_us};
+        // write back
+        status.domeAngle = da;
 
         // initialize variable before measuring
         if(lastPulseTime_us == 0){
@@ -105,10 +90,7 @@ void hallSensorISR(uint32_t events, BaseType_t& xHigherPriorityTaskWoken){
         avgRPM /= rpmMeasurementsSize;
 
         // and finally update the signal for the measured RPM
-        if(!measuredRPMSignal.writeFromISR({.rpm = avgRPM}, &xHigherPriorityTaskWoken)){
-            // retry once on failure
-            measuredRPMSignal.writeFromISR({.rpm = avgRPM}, &xHigherPriorityTaskWoken);
-        }
+        status.measuredRPM.setFromISR(avgRPM);
     }
 }
 
@@ -116,20 +98,15 @@ void pushBtnLeftISR(BaseType_t& xHigherPriorityTaskWoken){
     static uint32_t lastTriggerTime_ms = 0;
     const uint32_t currentTime_ms = xTaskGetTickCountFromISR();
     if(currentTime_ms - lastTriggerTime_ms > BTN_DEBOUNCE_MS){
-        // button isn't bouncing
-        bool readSuccess = false;
-        runtime_settings_t rts = rtSettingsSignal.readFromISR(readSuccess, &xHigherPriorityTaskWoken);
-        if(readSuccess){
-            rts.enableMotor = !rts.enableMotor;
-            rtSettingsSignal.writeFromISR(rts, &xHigherPriorityTaskWoken);
-        }
+        // button isn't bouncing (anymore)
+        runtimeSettings.enableMotor.set(!runtimeSettings.enableMotor.get());
     }
     lastTriggerTime_ms = currentTime_ms;
 }
 
 void gpio_callback(uint gpio, uint32_t events) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    if(gpio == PIN_HALL_SENSOR) hallSensorISR(events, xHigherPriorityTaskWoken);
+    if(gpio == PIN_HALL_SENSOR) hallSensorISR(events);
     else if(gpio == PIN_PUSHBTN_LEFT) pushBtnLeftISR(xHigherPriorityTaskWoken);
 
     if(xHigherPriorityTaskWoken){
@@ -179,65 +156,41 @@ void setup() {
     ULOG_TRACE("Configuring pins");
     configurePins();
 
-    // signals for communicating measured RPM and target RPM between tasks
-    ULOG_TRACE("Initializing communication signals");
-    measuredRPMSignal.init();
-    measuredRPMSignal.write({.rpm = 0}, 0);
-    rtSettingsSignal.init();
-    rtSettingsSignal.write({
-        .pid_controller = {
-            .kp = K_P,
-            .ki = K_I,
-            .kd = K_D,
-            .targetRPM = MOTOR_TARGET_SPEED,
-        },
-        .enableMotor = false,
-        .stableTargetRPM = false
-    }, 0);
-    domeAngleSignal.init();
-    domeAngleSignal.write({.angleBase = 0, .timeOfAngleIncrement_us = 0}, 0);
-
     // create tasks
     ULOG_TRACE("Creating tasks");
-    motorControlTaskParams_t mCtrlTaskParams = {
-        .measuredRPMSignal = measuredRPMSignal,
-        .runtimeSettingsSignal = rtSettingsSignal
-    };
+    ULOG_TRACE("Switching to Tx task for serial output");
+    if(pdPASS != xTaskCreate(serialTxTask, SERIAL_TX_TASK_NAME, SERIAL_TX_TASK_STACK_SIZE,
+                             NULL, SERIAL_TX_TASK_PRIORITY, &serialTxTaskHandle)) {
+        ULOG_CRITICAL("Failed to create serial Tx task");
+        configASSERT(false);
+    }
+    useTxTask = true;
+    ULOG_TRACE("Switch to Tx task done");
+    vTaskCoreAffinitySet(serialTxTaskHandle, (1<<1));
+
     if(pdPASS != xTaskCreate(motorControlTask, MOTOR_CONTROL_TASK_NAME, MOTOR_CONTROL_TASK_STACK_SIZE,
-                             (void*)&mCtrlTaskParams, MOTOR_CONTROL_TASK_PRIORITY, &motorCtrlTaskHandle)) {
+                             NULL, MOTOR_CONTROL_TASK_PRIORITY, &motorCtrlTaskHandle)) {
         ULOG_CRITICAL("Failed to create motor control task");
         configASSERT(false);
     }
     vTaskCoreAffinitySet(motorCtrlTaskHandle, (1<<0));
-    signalAgeCheckTaskParams_t sigAgeChkTskParams = {
-        .measuredRPMSignal = measuredRPMSignal,
-        .domeAngleSignal = domeAngleSignal
-    };
+
     if(pdPASS != xTaskCreate(signalAgeCheckTask, SIGNAL_AGE_CHECK_TASK_NAME,
-                             SIGNAL_AGE_CHECK_TASK_STACK_SIZE, (void*)&sigAgeChkTskParams,
+                             SIGNAL_AGE_CHECK_TASK_STACK_SIZE, NULL,
                              SIGNAL_AGE_CHECK_TASK_PRIORITY, &signalAgeCheckTaskHandle)) {
         ULOG_CRITICAL("Failed to create signal age check task");
         configASSERT(false);
     }
     vTaskCoreAffinitySet(signalAgeCheckTaskHandle, (1<<0));
-    serialInterfaceTaskParams_t serIntTskParams = {
-        .measuredRPMSignal = measuredRPMSignal,
-        .runtimeSettingsSignal = rtSettingsSignal
-    };
     if(pdPASS != xTaskCreate(serialInterfaceTask, SERIAL_INTERFACE_TASK_NAME,
-                             SERIAL_INTERFACE_TASK_STACK_SIZE, (void*)&serIntTskParams,
+                             SERIAL_INTERFACE_TASK_STACK_SIZE, NULL,
                              SERIAL_INTERFACE_TASK_PRIORITY, &serialInterfaceTaskHandle)) {
         ULOG_CRITICAL("Failed to create serial interface task");
         configASSERT(false);
     }
     vTaskCoreAffinitySet(signalAgeCheckTaskHandle, (1<<0));
-    sensorTaskParams_t sensorTskParams = {
-        .measuredRPMSignal = measuredRPMSignal,
-        .runtimeSettingsSignal = rtSettingsSignal,
-        .domeAngleSignal = domeAngleSignal
-    };
     if(pdPASS != xTaskCreate(sensorTask, SENSOR_TASK_NAME,
-                             SENSOR_TASK_STACK_SIZE, (void*)&sensorTskParams,
+                             SENSOR_TASK_STACK_SIZE, NULL,
                              SENSOR_TASK_PRIORITY, &sensorTaskHandle)) {
         ULOG_CRITICAL("Failed to create sensor task");
         configASSERT(false);

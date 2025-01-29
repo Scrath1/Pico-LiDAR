@@ -63,6 +63,18 @@
 // Time after which received serial data for commands is discarded if no
 // new data was received and the command is incomplete.
 #define SERIAL_CMD_INPUT_TIMEOUT_MS (500)
+// Maximum length of a debug message
+#define DBG_MESSAGE_MAX_LEN (256)
+#define TX_BUFFER_LEN (10*DBG_MESSAGE_MAX_LEN)
+
+
+// SENSOR CONFIGURATION
+// ==============================================================
+// Determines how many different data points are acquired per full
+// revolution of the dome. If this value is too high it may not be possible to reach
+#define DEFAULT_SCANPOINTS_PER_REV (16)
+// Maximum time in ms that is allowed per range measurement.
+#define RANGE_ACQUISITION_TIME_BUDGET_MS (33)
 
 // SIGNAL AGE
 // ==============================================================

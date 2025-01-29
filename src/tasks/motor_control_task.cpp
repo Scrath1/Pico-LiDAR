@@ -1,51 +1,55 @@
 #include "motor_control_task.h"
 
+#include <hardware/pwm.h>
 #include <ulog.h>
 
 #include "prj_config.h"
 #include "spid.h"
-#include <hardware/pwm.h>
-
-#define SIGNAL_LOCK_TIMEOUT (10)
 
 TaskHandle_t motorCtrlTaskHandle;
 
+// Copies of settings objects
+static setting<float> pid_kp;
+static setting<float> pid_ki;
+static setting<float> pid_kd;
+static setting<uint32_t> targetRPM;
+static setting<bool> enableMotor;
+
+void rpmToleranceCheck() {
+    const uint32_t tgt = targetRPM.get();
+    const uint32_t minMeasuredRPM = tgt - tgt * MEASURED_RPM_TOLERANCE_PERCENT;
+    const uint32_t maxMeasuredRPM = tgt + tgt * MEASURED_RPM_TOLERANCE_PERCENT;
+    if(minMeasuredRPM <= status.measuredRPM.rpm && status.measuredRPM.rpm <= maxMeasuredRPM) {
+        status.stableTargetRPMCount++;
+    } else {
+        status.stableTargetRPMCount = 0;
+    }
+    if(status.stableTargetRPMCount >= MEASURED_RPM_STABILITY_INTERVAL_COUNT && !status.stableTargetRPM) {
+        status.stableTargetRPM = true;
+        ULOG_DEBUG("measured RPM turned stable");
+        // rpmWithinToleranceIntervalsCnt may eventually overflow but with
+        // it being a uint32_t that should be a long long long time
+    } else if(status.stableTargetRPMCount < MEASURED_RPM_STABILITY_INTERVAL_COUNT && status.stableTargetRPM) {
+        status.stableTargetRPM = false;
+        ULOG_DEBUG("measured RPM turned unstable");
+    }
+}
+
 void motorControlTask(void* pvParameters) {
     ULOG_TRACE("Starting motor control task");
-    if(NULL == pvParameters) {
-        ULOG_CRITICAL("Failed to retrieve motor control task params");
-        configASSERT(false);
-    }
-    rpm_signal_t& measuredRPMSignal = ((motorControlTaskParams_t*)pvParameters)->measuredRPMSignal;
-    runtime_settings_signal_t& rtSettingsSignal = ((motorControlTaskParams_t*)pvParameters)->runtimeSettingsSignal;
-
-    bool rtSettingsSuccess = false;
-    uint32_t lastSettingsUpdate = 0;
-
-    taskENTER_CRITICAL();
-    runtime_settings_t rtSettings = rtSettingsSignal.read(rtSettingsSuccess, SIGNAL_LOCK_TIMEOUT);
-    if(rtSettingsSuccess) {
-        lastSettingsUpdate = rtSettingsSignal.getLastUpdateTime_ms();
-    }
-    taskEXIT_CRITICAL();
-    if(!rtSettingsSuccess) {
-        ULOG_CRITICAL("Failed to obtain settings in motor control task");
-        configASSERT(false);
-    }
+    // Copies of settings objects
+    pid_kp = runtimeSettings.pid_kp;
+    pid_ki = runtimeSettings.pid_ki;
+    pid_kd = runtimeSettings.pid_kd;
+    targetRPM = runtimeSettings.targetRPM;
+    enableMotor = runtimeSettings.enableMotor;
 
     // Initialize PID controller
     spid_t pid;
-    float kp = rtSettings.pid_controller.kp;
-    float ki = rtSettings.pid_controller.ki;
-    float kd = rtSettings.pid_controller.kd;
-    if(SPID_SUCCESS != spid_init(&pid, kp, ki, kd, PID_MIN_OUT, PID_MAX_OUT, PID_INTERVAL_MS)) {
+    if(SPID_SUCCESS != spid_init(&pid, pid_kp.get(), pid_ki.get(), pid_kd.get(), PID_MIN_OUT, PID_MAX_OUT, PID_INTERVAL_MS)) {
         ULOG_CRITICAL("Failed to initialize PID controller");
         configASSERT(false);
     }
-
-    // counter for number of PID intervals that the measured RPM
-    // value was within the configured tolerance for a stable signal
-    uint32_t rpmWithinToleranceIntervalsCnt = 0;
 
     // get channel and slice number of the PWM slice used for the motor pin
     const uint8_t pwmChannelNum = pwm_gpio_to_channel(PIN_MOTOR_PWM);
@@ -54,59 +58,38 @@ void motorControlTask(void* pvParameters) {
     TickType_t lastWakeTime = xTaskGetTickCount();
     ULOG_TRACE("Starting motor control task loop");
     for(;;) {
-        // check if motor enable switch is on
-        uint8_t pwm = 0;
-        rpm_data_t measuredRPM = {.rpm = 0};
-
-        // Check if there was an update to any settings
-        uint32_t updateTime = rtSettingsSignal.getLastUpdateTime_ms();
-        if(lastSettingsUpdate != updateTime) {
-            bool settingsSuccess = false;
-            rtSettings = rtSettingsSignal.read(settingsSuccess, SIGNAL_LOCK_TIMEOUT);
-            if(settingsSuccess) {
-                spid_set_kp(&pid, rtSettings.pid_controller.kp);
-                spid_set_ki(&pid, rtSettings.pid_controller.ki);
-                spid_set_kd(&pid, rtSettings.pid_controller.kd);
-                lastSettingsUpdate = updateTime;
-                ULOG_INFO("Motor task: Received settings update");
-            } else {
-                ULOG_ERROR("Motor task: Failed to update settings");
-            }
+        // First check for setting updates
+        if(pid_kp != runtimeSettings.pid_kp){
+            ULOG_INFO("%s changed: %0.3f -> %0.3f", pid_kp.name, pid.k_p, runtimeSettings.pid_kp);
+            pid_kp = runtimeSettings.pid_kp;
+            spid_set_kp(&pid, pid_kp.get());
         }
-
-        // get measured RPM values
-        bool measuredRPMSuccess = false;
-        uint32_t measuredRPMAge_ms;
-        measuredRPM = measuredRPMSignal.read(measuredRPMSuccess, SIGNAL_LOCK_TIMEOUT, measuredRPMAge_ms);
+        if(pid_ki != runtimeSettings.pid_ki){
+            ULOG_INFO("%s changed: %0.3f -> %0.3f", pid_ki.name, pid.k_i, runtimeSettings.pid_ki);
+            pid_ki = runtimeSettings.pid_ki;
+            spid_set_ki(&pid, pid_ki.get());
+        }
+        if(pid_kd != runtimeSettings.pid_kd){
+            ULOG_INFO("%s changed: %0.3f -> %0.3f", pid_kd.name, pid.k_d, runtimeSettings.pid_kd);
+            pid_kd = runtimeSettings.pid_ki;
+            spid_set_kd(&pid, pid_kd.get());
+        }
+        if(enableMotor != runtimeSettings.enableMotor){
+            enableMotor = runtimeSettings.enableMotor;
+        }
 
         // measured rpm stability check
-        const uint32_t minMeasuredRPM = rtSettings.pid_controller.targetRPM - rtSettings.pid_controller.targetRPM * MEASURED_RPM_TOLERANCE_PERCENT;
-        const uint32_t maxMeasuredRPM = rtSettings.pid_controller.targetRPM + rtSettings.pid_controller.targetRPM * MEASURED_RPM_TOLERANCE_PERCENT;
-        if(minMeasuredRPM <= measuredRPM.rpm && measuredRPM.rpm <= maxMeasuredRPM){
-            rpmWithinToleranceIntervalsCnt++;
+        rpmToleranceCheck();
+        uint16_t pwm;
+        uint32_t pidRPMTarget;
+        if(enableMotor.get()){ // if motor enable is on
+            pwm = (uint16_t)spid_process(&pid, (float)targetRPM.get(), status.measuredRPM.rpm);
         }
         else{
-            rpmWithinToleranceIntervalsCnt = 0;
+            spid_process(&pid, (float)0, status.measuredRPM.rpm);
+            pwm = 0;
         }
-        if(rpmWithinToleranceIntervalsCnt >= MEASURED_RPM_STABILITY_INTERVAL_COUNT && !rtSettings.stableTargetRPM){
-            rtSettings.stableTargetRPM = true;
-            rtSettingsSignal.write(rtSettings, SIGNAL_LOCK_TIMEOUT);
-            ULOG_DEBUG("measured RPM turned stable");
-            // rpmWithinToleranceIntervalsCnt may eventually overflow but with
-            // it being a uint32_t that should be a long long long time
-        }
-        else if(rpmWithinToleranceIntervalsCnt < MEASURED_RPM_STABILITY_INTERVAL_COUNT && rtSettings.stableTargetRPM){
-            rtSettings.stableTargetRPM = false;
-            rtSettingsSignal.write(rtSettings, SIGNAL_LOCK_TIMEOUT);
-            ULOG_DEBUG("measured RPM turned unstable");
-        }
-
-        if(rtSettings.enableMotor && measuredRPMSuccess) {
-            if(measuredRPMAge_ms > PID_INTERVAL_MS){
-                ULOG_WARNING("Measured RPM signal age is older than PID_INTERVAL_MS: %lu", measuredRPMAge_ms);
-            }
-            pwm = (uint8_t)spid_process(&pid, (float)rtSettings.pid_controller.targetRPM, measuredRPM.rpm);
-        }
+        status.pwmOutputLevel = pwm;
         pwm_set_chan_level(pwmSliceNum, pwmChannelNum, pwm);
 
         // Preempt task until next loop iteration time

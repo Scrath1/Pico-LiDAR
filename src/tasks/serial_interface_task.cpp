@@ -2,28 +2,19 @@
 #include <ulog.h>
 #include "prj_config.h"
 #include "serial_commands.h"
+#include "global.h"
+#include "serial_print.h"
 
 #include <cstdlib>
-
-#define SIGNAL_LOCK_TIMEOUT_MS 25
 
 #if SERIAL_CMD_INPUT_TIMEOUT_MS < SERIAL_INTERFACE_TASK_INTERVAL_MS
     #error "SERIAL_CMD_INPUT_TIMEOUT_MS should be larger than SERIAL_INTERFACE_TASK_INTERVAL_MS"
 #endif
 
 TaskHandle_t serialInterfaceTaskHandle;
-rpm_signal_t* targetRPMSignalPtr;
-runtime_settings_signal_t* rtSettingsSignalPtr;
 
 void serialInterfaceTask(void* pvParameters){
     ULOG_TRACE("Starting serial interface task");
-    if(NULL == pvParameters) {
-        ULOG_CRITICAL("Failed to retrieve serial interface task params");
-        configASSERT(false);
-    }
-    rpm_signal_t& measuredRPMSignal = ((serialInterfaceTaskParams_t*)pvParameters)->measuredRPMSignal;
-    runtime_settings_signal_t& rtSettingsSignal = ((serialInterfaceTaskParams_t*)pvParameters)->runtimeSettingsSignal;
-    rtSettingsSignalPtr = &rtSettingsSignal;
 
     // Command parser setup
     char serialCommandBuffer[SERIAL_CMD_INPUT_BUFFER_SIZE];
@@ -51,7 +42,7 @@ void serialInterfaceTask(void* pvParameters){
                 cmdInputBuffer[fillLevel++] = c;
             }
             if(c == CMD_END_DELIMITER){
-                if(parseCommand(rtSettingsSignal, (uint8_t*)cmdInputBuffer, fillLevel)){
+                if(parseCommand((uint8_t*)cmdInputBuffer, fillLevel)){
                     ULOG_INFO("Command executed successfully");
                 }
                 else{
@@ -76,24 +67,12 @@ void serialInterfaceTask(void* pvParameters){
 
         // Transmit runtime data for plotting at fixed interval
         if(currentTime_ms - timestampLastPlotDataTansmission_ms > SERIAL_INTERFACE_PLOT_OUTPUT_INTERVAL_MS){
-            bool successRtsRead = false;
-            bool successMeasuredRPMRead = false;
-            runtime_settings_t rts = rtSettingsSignal.read(successRtsRead, SIGNAL_LOCK_TIMEOUT_MS);
-            rpm_data_t measuredRPM = measuredRPMSignal.read(successMeasuredRPMRead, SIGNAL_LOCK_TIMEOUT_MS);
-            if(successRtsRead && successMeasuredRPMRead){
-                SERIAL_PORT.print(">targetRPM:");
-                SERIAL_PORT.println(rts.pid_controller.targetRPM);
-                SERIAL_PORT.print(">measuredRPM:");
-                SERIAL_PORT.println(measuredRPM.rpm);
-                // SERIAL_PORT.print(">PWM:");
-                // SERIAL_PORT.println(pwm);
-                SERIAL_PORT.print(">wErr:");
-                SERIAL_PORT.println(measuredRPMSignal.writeErrCnt);
-                SERIAL_PORT.print(">rErr:");
-                SERIAL_PORT.println(measuredRPMSignal.readErrCnt);
-                // update timestamp of last transmission
-                timestampLastPlotDataTansmission_ms = currentTime_ms;
-            }
+            serialPrintf(">%s:%lu\n", runtimeSettings.targetRPM.name, runtimeSettings.targetRPM.get());
+            serialPrintf(">measuredRPM:%lu\n", status.measuredRPM.rpm);
+            serialPrintf(">PWM:%lu\n", status.pwmOutputLevel);
+
+            // update timestamp of last transmission
+            timestampLastPlotDataTansmission_ms = currentTime_ms;
         }
 
         vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(SERIAL_INTERFACE_TASK_INTERVAL_MS));

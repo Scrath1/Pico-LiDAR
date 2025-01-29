@@ -1,13 +1,8 @@
-#ifndef SIGNAL_TYPES_H
-#define SIGNAL_TYPES_H
-#include "signal_template.h"
-#include "runtime_settings.h"
-#include <pico/stdlib.h>
-#include "prj_config.h"
+#ifndef DOME_ANGLE_H
+#define DOME_ANGLE_H
 
-typedef struct{
-    uint32_t rpm;
-} rpm_data_t;
+#include "prj_config.h"
+#include <pico/stdlib.h>
 
 typedef struct{
     // stores the base angle as determined by hall sensor pulses
@@ -34,10 +29,6 @@ typedef struct{
         uint16_t angleIncrement = (360 / PULSES_PER_REV) / (pulseRotationTime_us / timeSinceLastPulse_us);
         return (angleBase + angleIncrement) % 360;
     }
-} angle_position_t;
+} dome_angle_t;
 
-typedef signal<rpm_data_t> rpm_signal_t;
-typedef signal<runtime_settings_t> runtime_settings_signal_t;
-typedef signal<angle_position_t>dome_angle_signal_t;
-
-#endif // SIGNAL_TYPES_H
+#endif // DOME_ANGLE_H

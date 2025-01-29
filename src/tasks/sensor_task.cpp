@@ -1,44 +1,53 @@
 #include "sensor_task.h"
+
+#include <VL53L0X.h>
+#include <Wire.h>
 #include <ulog.h>
 
-#include <Wire.h>
-#include <VL53L0X.h>
+#include "global.h"
 #include "prj_config.h"
+#include "serial_print.h"
 
-#define VL53L0X_TIMEOUT_MS (50)
-#define TEST_TASK_INTERVAL_TODO_CHANGE (30)
-
-#define SIGNAL_LOCK_TIME_RELAXED (50)
-#define SIGNAL_LOCK_TIME_CRITICAL (2)
+#define VL53L0X_TIMEOUT_MS 50
 
 TaskHandle_t sensorTaskHandle;
 
-void sensorTask(void* pvParameters){
-    ULOG_TRACE("Starting sensor task");
-    if(NULL == pvParameters){
-        ULOG_CRITICAL("Failed to retrieve sensor task params");
-        configASSERT(false);
+// local setting copies
+static setting<uint32_t> targetRPM;
+static setting<uint32_t> vl53l0xTimingBudget_us;
+static setting<uint16_t> dataPointsPerRev;
+
+uint32_t rpmToTimePerRev_ms(uint16_t rpm){
+    return (1000/(rpm/60));
+}
+
+uint16_t scantimeInterval_ms(uint32_t timePerRev_ms, uint16_t scanpointsPerRev){
+    return timePerRev_ms / scanpointsPerRev;
+}
+
+uint16_t checkMaxScanpointsPerRev(uint16_t rpm, uint32_t scantimeBudget_ms, uint16_t scanpointsPerRev){
+    uint32_t timePerRotation_ms = rpmToTimePerRev_ms(rpm);
+    uint32_t timePerScan_ms = 0;
+    while(true){
+        if(scanpointsPerRev == 0) return 0;
+        timePerScan_ms = scantimeInterval_ms(timePerRotation_ms, scanpointsPerRev);
+        if(timePerScan_ms < scantimeBudget_ms){
+            scanpointsPerRev--;
+        }
+        else return scanpointsPerRev;
     }
-    rpm_signal_t& measuredRPMSignal = ((sensorTaskParams_t*)pvParameters)->measuredRPMSignal;
-    runtime_settings_signal_t& rtSettingsSignal = ((sensorTaskParams_t*)pvParameters)->runtimeSettingsSignal;
-    dome_angle_signal_t& domeAngleSignal = ((sensorTaskParams_t*)pvParameters)->domeAngleSignal;
+}
+
+void sensorTask(void* pvParameters) {
+    ULOG_TRACE("Starting sensor task");
+
     VL53L0X vl53l0x;
     Wire.begin();
     vl53l0x.setTimeout(VL53L0X_TIMEOUT_MS);
-    while(!vl53l0x.init()){
+    while(!vl53l0x.init()) {
         ULOG_ERROR("Failed to initialize VL53L0X sensor. Retrying in 1s");
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
-    bool rtsSuccess = false;
-    runtime_settings_t rts;
-    uint32_t lastRtsUpdate_ms = 0;
-    while(!rtsSuccess){
-        rts = rtSettingsSignal.read(rtsSuccess, SIGNAL_LOCK_TIME_RELAXED);
-        lastRtsUpdate_ms = rtSettingsSignal.getLastUpdateTime_ms();
-    }
-
-    // undecided whether to use single shot or continuous mode
-    // vl53l0x.startContinuous(measurementPeriod)
 
     // Ranging profiles for VL53L0X
     // +---------------+---------------+---------------------+----------------------------------------+
@@ -49,7 +58,7 @@ void sensorTask(void* pvParameters){
     // | Long range    | 33ms          | 2m (white target)   | long ranging, only for dark conditions |
     // | High Speed    | 20ms          | 1.2m (white target) | high speed, accuracy is no priority    |
     // +---------------+---------------+---------------------+----------------------------------------+
-    vl53l0x.setMeasurementTimingBudget(20000); // 20ms -> High Speed profile
+    vl53l0x.setMeasurementTimingBudget(vl53l0xTimingBudget_us.get());  // 20ms -> High Speed profile
     // Operating modes
     // 1. Single ranging: Only one measurement is taken
     // 2. Continuous: Back to back measuring as fast as possible
@@ -61,33 +70,46 @@ void sensorTask(void* pvParameters){
     // 2. Calculate task trigger intervals
     TickType_t lastWakeTime = xTaskGetTickCount();
     ULOG_TRACE("Starting sensor task loop");
-    for(;;){
-        if(lastRtsUpdate_ms != rtSettingsSignal.getLastUpdateTime_ms()){
-            rts = rtSettingsSignal.read(rtsSuccess, SIGNAL_LOCK_TIME_CRITICAL);
+    for(;;) {
+        // Check for setting updates. The local copies are used so that
+        // changes in other tasks to the global objects are less likely to mess
+        // up some calculations here
+        if(targetRPM != runtimeSettings.targetRPM) {
+            targetRPM = runtimeSettings.targetRPM;
+        }
+        if(vl53l0xTimingBudget_us != runtimeSettings.vl53l0xMeasurementTimingBudget_us) {
+            vl53l0xTimingBudget_us = runtimeSettings.vl53l0xMeasurementTimingBudget_us;
+            vl53l0x.setMeasurementTimingBudget(vl53l0xTimingBudget_us.get());
+        }
+        if(dataPointsPerRev != runtimeSettings.dataPointsPerRev) {
+            dataPointsPerRev = runtimeSettings.dataPointsPerRev;
         }
 
+        // ToDo: Maybe outsource this step to another point
+        uint16_t checkedMaxScanpoints = checkMaxScanpointsPerRev(targetRPM.get(), vl53l0xTimingBudget_us.get() / 1000, dataPointsPerRev.get());
+        if(checkedMaxScanpoints < dataPointsPerRev.get()){
+            runtimeSettings.dataPointsPerRev.set(checkedMaxScanpoints);
+            uint32_t rotationPeriod_ms = rpmToTimePerRev_ms(targetRPM.get());
+            uint32_t taskInterval_ms = scantimeInterval_ms(rotationPeriod_ms, checkedMaxScanpoints);
+            status.sensorTaskInterval_ms = taskInterval_ms;
+            ULOG_DEBUG("rpm:%lu, datapoints:%u => intv:%lu", targetRPM.get(), dataPointsPerRev.get(), taskInterval_ms);
+        }
+
+        // Actual range reading
         uint16_t range_mm = vl53l0x.readRangeSingleMillimeters();
         // get angle of measurement
-        bool success = false;
-        angle_position_t anglePos = domeAngleSignal.read(success, SIGNAL_LOCK_TIME_CRITICAL);
         int16_t currentAngle = -1;
-        if(rts.stableTargetRPM){
-            currentAngle = anglePos.calculateCurrentAngle(rts.pid_controller.targetRPM);
+        if(status.stableTargetRPM) {
+            currentAngle = status.domeAngle.calculateCurrentAngle(targetRPM.get());
         }
-        if(success){
-            if(vl53l0x.timeoutOccurred()){
-                ULOG_WARNING("VL53L0X read timeout");
-            }
-            else{
-                SERIAL_PORT.print(">VL53L0X:");
-                SERIAL_PORT.print(currentAngle);
-                SERIAL_PORT.print(":");
-                SERIAL_PORT.print(range_mm);
-                SERIAL_PORT.println("|np"); // flag for teleplot to not plot this value
-            }
+        if(vl53l0x.timeoutOccurred()) {
+            ULOG_WARNING("VL53L0X read timeout");
+        } else {
+            serialPrintf(">VL53L0X:%i:%lu|np", currentAngle, range_mm);
         }
 
-        if(pdFALSE == xTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(TEST_TASK_INTERVAL_TODO_CHANGE))){
+        ULOG_ALWAYS("sensIntv:%lu", status.sensorTaskInterval_ms);
+        if(pdFALSE == xTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(status.sensorTaskInterval_ms))) {
             ULOG_WARNING("sensor task timing violation");
         }
     }

@@ -30,10 +30,10 @@ def _create_gui() -> tk.Tk:
         
     def on_motor_enable_btn_press():
         if bool(ui_mtr_btn_var.get()):
-            print("Starting motor")
+            # print("Starting motor")
             si.start_motor()
         else:
-            print("Stopping Motor")
+            # print("Stopping Motor")
             si.stop_motor()
             
     def on_update_btn_press():

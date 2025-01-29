@@ -4,7 +4,6 @@
 #include <Arduino.h>
 #include <FreeRTOS.h>
 #include <task.h>
-#include "signals/signal_types.h"
 
 #define SIGNAL_AGE_CHECK_TASK_STACK_SIZE (configMINIMAL_STACK_SIZE)
 #define SIGNAL_AGE_CHECK_TASK_NAME ("sigAgeChkTsk")
@@ -13,11 +12,6 @@
 #if (SIGNAL_AGE_CHECK_TASK_PRIORITY >= configMAX_PRIORITIES)
     #error "Signal age check task priority too high"
 #endif
-
-typedef struct {
-    rpm_signal_t& measuredRPMSignal;
-    dome_angle_signal_t& domeAngleSignal;
-} signalAgeCheckTaskParams_t;
 
 extern TaskHandle_t signalAgeCheckTaskHandle;
 void signalAgeCheckTask(void* pvParameters);
