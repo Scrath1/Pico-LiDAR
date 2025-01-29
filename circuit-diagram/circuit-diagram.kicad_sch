@@ -787,6 +787,12 @@
 		(uuid "5b195b54-a0c1-4a97-a0bd-a0fc9bbb0222")
 	)
 	(junction
+		(at 41.91 27.94)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "6f759124-36f3-4d11-a85f-e773716b5717")
+	)
+	(junction
 		(at 203.2 40.64)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -837,16 +843,6 @@
 			(type default)
 		)
 		(uuid "0f64a342-badd-407c-ad02-8fff976b974c")
-	)
-	(wire
-		(pts
-			(xy 66.04 48.26) (xy 88.9 48.26)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "1b8c6e00-9172-4688-82e1-2deae273f723")
 	)
 	(wire
 		(pts
@@ -917,6 +913,16 @@
 			(type default)
 		)
 		(uuid "51cadacc-8493-4e6c-9538-ccd2e5252fe3")
+	)
+	(wire
+		(pts
+			(xy 22.86 27.94) (xy 41.91 27.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5e1a16b8-8e37-48a4-96c3-066bf2e55ef4")
 	)
 	(wire
 		(pts
@@ -1170,16 +1176,6 @@
 	)
 	(wire
 		(pts
-			(xy 33.02 39.37) (xy 48.26 39.37)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "db31ca8d-d9b8-4887-b952-5f5a1a15ff97")
-	)
-	(wire
-		(pts
 			(xy 121.92 26.67) (xy 144.78 26.67)
 		)
 		(stroke
@@ -1364,17 +1360,7 @@
 		)
 		(uuid "14084621-f1ff-49b9-b53f-c834b4ed50df")
 	)
-	(label "MOTOR_ENABLE_SWITCH"
-		(at 88.9 48.26 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "142610fa-c589-40fb-af50-ea173ecb271b")
-	)
-	(label "SWCLK"
+	(label "DBG_SWCLK"
 		(at 33.02 57.15 0)
 		(effects
 			(font
@@ -1383,6 +1369,16 @@
 			(justify left bottom)
 		)
 		(uuid "1828425d-b7b8-4383-bc6d-0bc48244a634")
+	)
+	(label "DBG_VTRef"
+		(at 22.86 27.94 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "207b86ef-ff3a-4f93-9a32-e9c1f4359336")
 	)
 	(label "HALL_SENSOR"
 		(at 33.02 36.83 0)
@@ -1394,7 +1390,7 @@
 		)
 		(uuid "3546547f-759e-447c-9ddd-0a23c43fbe2e")
 	)
-	(label "RUN"
+	(label "DBG_RUN"
 		(at 33.02 30.48 0)
 		(effects
 			(font
@@ -1434,7 +1430,7 @@
 		)
 		(uuid "a01faaed-58df-4de9-8a3b-cc00e078681c")
 	)
-	(label "SWDIO"
+	(label "DBG_SWDIO"
 		(at 33.02 59.69 0)
 		(effects
 			(font
@@ -1443,16 +1439,6 @@
 			(justify left bottom)
 		)
 		(uuid "d0686a1e-b955-4a16-82dc-a07576218479")
-	)
-	(label "USER_POT"
-		(at 33.02 39.37 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "d8ba3207-0089-4183-bf57-2152b19be795")
 	)
 	(label "I2C0_SDA"
 		(at 88.9 30.48 180)

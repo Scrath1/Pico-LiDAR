@@ -3,7 +3,6 @@ import argparse
 from pid_gui import run_gui
 import serial_interface as si
 import time
-from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import queue
 import numpy as np
