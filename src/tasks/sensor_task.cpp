@@ -105,7 +105,7 @@ void sensorTask(void* pvParameters) {
         if(vl53l0x.timeoutOccurred()) {
             ULOG_WARNING("VL53L0X read timeout");
         } else {
-            serialPrintf(">VL53L0X:%i:%lu|np", currentAngle, range_mm);
+            serialPrintf(">VL53L0X:%i:%lu|np\n", currentAngle, range_mm);
         }
 
         ULOG_ALWAYS("sensIntv:%lu", status.sensorTaskInterval_ms);

@@ -1,9 +1,9 @@
 #include "serial_commands.h"
+
+#include "global.h"
 #include "prj_config.h"
-#include <Arduino.h>
-
 #include "ulog.h"
-
+#include "serial_print.h"
 
 bool parseCommand(const uint8_t* frame, uint8_t frameSize) {
     if(frame == NULL) {

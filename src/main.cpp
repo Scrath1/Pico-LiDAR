@@ -15,9 +15,10 @@
 #include "tasks/signal_age_check_task.h"
 #include "tasks/serial_interface_task.h"
 #include "tasks/sensor_task.h"
+#include "tasks/serial_tx_task.h"
 #include "averaging_filter.h"
+#include "serial_print.h"
 
-#define SIGNAL_LOCK_TIMEOUT 50
 #define TARGET_RPM_MIN_THRESHOLD (60)
 #define TARGET_RPM_FILTER_SIZE (16)
 
@@ -25,12 +26,11 @@ AVERAGING_FILTER_DEF(hallIntervalFilter, 4);
 AVERAGING_FILTER_DEF(measuredRPMFilter, RPM_AVERAGING_FILTER_SIZE);
 AVERAGING_FILTER_DEF(targetRPMFilter, TARGET_RPM_FILTER_SIZE);
 
-
 void consoleLogger(ulog_level_t severity, char* msg) {
-    char fmsg[256];
+    char fmsg[DBG_MESSAGE_MAX_LEN];
     uint32_t len = snprintf(fmsg, sizeof(fmsg), "%10lu [%s]: %s\n", pdTICKS_TO_MS(xTaskGetTickCount()),
                             ulog_level_name(severity), msg);
-    SERIAL_PORT.print(fmsg);
+    serialPrint(fmsg, len+1);
 }
 
 void hallSensorISR(uint32_t events){
@@ -164,9 +164,10 @@ void setup() {
         ULOG_CRITICAL("Failed to create serial Tx task");
         configASSERT(false);
     }
-    useTxTask = true;
+    // useTxTask = true;
+    vTaskDelay(pdMS_TO_TICKS(50));
     ULOG_TRACE("Switch to Tx task done");
-    vTaskCoreAffinitySet(serialTxTaskHandle, (1<<1));
+    vTaskCoreAffinitySet(serialTxTaskHandle, (1<<0));
 
     if(pdPASS != xTaskCreate(motorControlTask, MOTOR_CONTROL_TASK_NAME, MOTOR_CONTROL_TASK_STACK_SIZE,
                              NULL, MOTOR_CONTROL_TASK_PRIORITY, &motorCtrlTaskHandle)) {
@@ -196,6 +197,7 @@ void setup() {
         configASSERT(false);
     }
     vTaskCoreAffinitySet(sensorTaskHandle, (1<<0));
+    Serial.println("Task creation done");
 
     ULOG_TRACE("Setup finished");
     vTaskDelete(NULL);
