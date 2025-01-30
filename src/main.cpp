@@ -54,7 +54,14 @@ void hallSensorISR(uint32_t events){
         // read
         dome_angle_t da = status.domeAngle;
         // modify
-        uint16_t newAngleBase = (da.angleBase + (360 / PULSES_PER_REV));
+        uint16_t newAngleBase;
+        if(!gpio_get(PIN_ZERO_HALL_SENSOR)){
+            // Zero angle detected
+            newAngleBase = 0;
+        }
+        else{
+            newAngleBase = (da.angleBase + (360 / PULSES_PER_REV));
+        }
         dome_angle_t newAngPos = {.angleBase = newAngleBase, .timeOfAngleIncrement_us = currentTime_us};
         // write back
         status.domeAngle = da;
@@ -106,7 +113,7 @@ void pushBtnLeftISR(BaseType_t& xHigherPriorityTaskWoken){
 
 void gpio_callback(uint gpio, uint32_t events) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    if(gpio == PIN_HALL_SENSOR) hallSensorISR(events);
+    if(gpio == PIN_SPEED_HALL_SENSOR) hallSensorISR(events);
     else if(gpio == PIN_PUSHBTN_LEFT) pushBtnLeftISR(xHigherPriorityTaskWoken);
 
     if(xHigherPriorityTaskWoken){
@@ -119,9 +126,12 @@ void configurePins(){
     pinMode(PIN_LED_USER, OUTPUT);
     digitalWrite(PIN_LED_USER, 1);
 
-    gpio_init(PIN_HALL_SENSOR);
-    gpio_set_dir(PIN_HALL_SENSOR, GPIO_IN);
-    gpio_set_irq_enabled_with_callback(PIN_HALL_SENSOR, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, gpio_callback);
+    gpio_init(PIN_SPEED_HALL_SENSOR);
+    gpio_set_dir(PIN_SPEED_HALL_SENSOR, GPIO_IN);
+    gpio_set_irq_enabled_with_callback(PIN_SPEED_HALL_SENSOR, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, gpio_callback);
+
+    gpio_init(PIN_ZERO_HALL_SENSOR);
+    gpio_set_dir(PIN_ZERO_HALL_SENSOR, GPIO_IN);
 
     gpio_init(PIN_PUSHBTN_LEFT);
     gpio_set_dir(PIN_PUSHBTN_LEFT, GPIO_IN);

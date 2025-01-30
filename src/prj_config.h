@@ -4,7 +4,8 @@
 // PIN CONFIGURATIONS
 // ==============================================================
 #define PIN_MOTOR_PWM 16
-#define PIN_HALL_SENSOR 26
+#define PIN_SPEED_HALL_SENSOR 18
+#define PIN_ZERO_HALL_SENSOR 19
 #define PIN_PUSHBTN_LEFT 13
 #define PIN_LED_USER 17
 #define LED_ON (0)
