@@ -10,8 +10,12 @@ extern "C" {
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <FreeRTOS.h>
+#include <semphr.h>
 
 #include "return_codes.h"
+
+#define BUFFER_ITEM_TYPE char
 
 /**
 * Usage:
@@ -24,7 +28,7 @@ extern "C" {
  * @warning Actual buffer capacity is sz-1
  */
 #define RING_BUFFER_DEF(x, sz) \
-    uint8_t x##_data[sz];      \
+    BUFFER_ITEM_TYPE x##_data[sz];      \
     ring_buffer_t x = {        \
         .buffer = x##_data,    \
         .head = 0,             \
@@ -33,7 +37,7 @@ extern "C" {
 
 typedef struct ring_buffer
 {
-    uint8_t *buffer;
+    BUFFER_ITEM_TYPE *buffer;
     // Index where the next element to be added will be stored
     volatile uint32_t head;
     // Index of oldest element in ringbuffer. If there is no data
@@ -41,6 +45,7 @@ typedef struct ring_buffer
     volatile uint32_t tail;
     // Total buffer array length. Actual ringbuffer capacity is len-1
     const uint32_t len;
+    SemaphoreHandle_t mutex;
 } ring_buffer_t;
 
 /**
@@ -48,8 +53,10 @@ typedef struct ring_buffer
  *  Can also be used to reset a ringbuffer object to 0. Does not actually
  *  clear the memory contents though.
  * @param rb [IN] Pointer to ringbuffer object
+ * @return RC_SUCCESS on success,
+ * @return RC_ERROR_NULL if mutex could not be initialized
  */
-void ring_buffer_init(ring_buffer_t *const rb);
+RC_t ring_buffer_init(ring_buffer_t *const rb);
 
 /**
  * @brief Adds a single byte to the ringbuffer
@@ -57,17 +64,19 @@ void ring_buffer_init(ring_buffer_t *const rb);
  * @param b [IN] Byte to add
  * @return RC_SUCCESS on success
  */
-RC_t ring_buffer_put(ring_buffer_t *const rb, uint8_t b);
+RC_t ring_buffer_put(ring_buffer_t *const rb, BUFFER_ITEM_TYPE b, uint32_t timeout_ms);
 
 /**
  * @brief Removes a single byte from the ringbuffer and returns it to the user,
  *  if a byte is available in the buffer
  * @param rb [IN] Pointer to ringbuffer object
  * @param bPtr [IN] Pointer to variable where the removed byte should be stored
+ * @param timeout_ms [IN] Maximum time for acquisition of mutex before returning error
  * @return RC_SUCCESS on success
  * @return RC_BUFFER_EMPTY if there is no data to retrieve
+ * @return RC_ERROR_BUSY if the mutex lock could not be acquired
  */
-RC_t ring_buffer_get(ring_buffer_t *const rb, uint8_t *const bPtr);
+RC_t ring_buffer_get(ring_buffer_t *const rb, BUFFER_ITEM_TYPE *const bPtr, uint32_t timeout_ms);
 
 /**
  * @brief Checks whether the ringbuffer is empty
@@ -76,9 +85,13 @@ RC_t ring_buffer_get(ring_buffer_t *const rb, uint8_t *const bPtr);
  */
 static inline bool ring_buffer_is_empty(ring_buffer_t *const rb)
 {
+    if(NULL == rb->mutex) return true;
+    xSemaphoreTakeRecursive(rb->mutex, portMAX_DELAY);
     uint32_t head = rb->head;
     uint32_t tail = rb->tail;
-    return (head == tail);
+    bool ret = (head == tail);
+    xSemaphoreGiveRecursive(rb->mutex);
+    return ret;
 }
 
 /**
@@ -88,9 +101,13 @@ static inline bool ring_buffer_is_empty(ring_buffer_t *const rb)
  */
 static inline bool ring_buffer_is_full(ring_buffer_t *const rb)
 {
+    if(NULL == rb->mutex) return true;
+    xSemaphoreTakeRecursive(rb->mutex, portMAX_DELAY);
     uint32_t head = rb->head;
     uint32_t tail = rb->tail;
-    return (((head + 1) % rb->len) == tail);
+    bool ret = (((head + 1) % rb->len) == tail);
+    xSemaphoreGiveRecursive(rb->mutex);
+    return ret;
 }
 
 /**
@@ -99,9 +116,13 @@ static inline bool ring_buffer_is_full(ring_buffer_t *const rb)
  */
 static inline uint32_t ring_buffer_avail(ring_buffer_t *const rb)
 {
+    if(NULL == rb->mutex) return 0;
+    xSemaphoreTakeRecursive(rb->mutex, portMAX_DELAY);
     uint32_t head = rb->head;
     uint32_t tail = rb->tail;
-    return (head - tail) % rb->len;
+    bool ret = (head - tail) % rb->len;
+    xSemaphoreGiveRecursive(rb->mutex);
+    return ret;
 }
 #ifdef __cplusplus
 }

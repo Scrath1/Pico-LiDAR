@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <cstdarg>
 
-extern bool useTxTask;
+extern volatile bool useTxTask;
 
 void serialPrint(const char* msg);
 void serialPrint(const char* msg, uint32_t msgLen);

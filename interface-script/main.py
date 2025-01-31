@@ -91,9 +91,11 @@ def main():
         while plt.fignum_exists(fig_id):
             _update_lidar_plot()
             time.sleep(0.1)
-        si.stop_motor()
-        # sleep is necessary so stop message can be sent before program exits
-        time.sleep(0.05)
+
+    # Before exiting, stop motor
+    si.stop_motor()
+    # sleep is necessary so stop message can be sent before program exits
+    time.sleep(0.05)
 
 if __name__=="__main__":
     main()

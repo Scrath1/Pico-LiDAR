@@ -169,15 +169,17 @@ void setup() {
     // create tasks
     ULOG_TRACE("Creating tasks");
     ULOG_TRACE("Switching to Tx task for serial output");
-    if(pdPASS != xTaskCreate(serialTxTask, SERIAL_TX_TASK_NAME, SERIAL_TX_TASK_STACK_SIZE,
-                             NULL, SERIAL_TX_TASK_PRIORITY, &serialTxTaskHandle)) {
+    volatile bool txTaskReady = false;
+    if(pdPASS != xTaskCreateAffinitySet(serialTxTask, SERIAL_TX_TASK_NAME, SERIAL_TX_TASK_STACK_SIZE,
+                             (void*)(&txTaskReady), SERIAL_TX_TASK_PRIORITY, SERIAL_TX_TASK_CORE_MASK, &serialTxTaskHandle)) {
         ULOG_CRITICAL("Failed to create serial Tx task");
         configASSERT(false);
     }
-    // useTxTask = true;
-    vTaskDelay(pdMS_TO_TICKS(50));
+    while(!txTaskReady){
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    useTxTask = true;
     ULOG_TRACE("Switch to Tx task done");
-    vTaskCoreAffinitySet(serialTxTaskHandle, (1<<0));
 
     if(pdPASS != xTaskCreate(motorControlTask, MOTOR_CONTROL_TASK_NAME, MOTOR_CONTROL_TASK_STACK_SIZE,
                              NULL, MOTOR_CONTROL_TASK_PRIORITY, &motorCtrlTaskHandle)) {
@@ -200,14 +202,13 @@ void setup() {
         configASSERT(false);
     }
     vTaskCoreAffinitySet(signalAgeCheckTaskHandle, (1<<0));
-    if(pdPASS != xTaskCreate(sensorTask, SENSOR_TASK_NAME,
-                             SENSOR_TASK_STACK_SIZE, NULL,
-                             SENSOR_TASK_PRIORITY, &sensorTaskHandle)) {
-        ULOG_CRITICAL("Failed to create sensor task");
-        configASSERT(false);
-    }
-    vTaskCoreAffinitySet(sensorTaskHandle, (1<<0));
-    Serial.println("Task creation done");
+    // if(pdPASS != xTaskCreate(sensorTask, SENSOR_TASK_NAME,
+    //                          SENSOR_TASK_STACK_SIZE, NULL,
+    //                          SENSOR_TASK_PRIORITY, &sensorTaskHandle)) {
+    //     ULOG_CRITICAL("Failed to create sensor task");
+    //     configASSERT(false);
+    // }
+    // vTaskCoreAffinitySet(sensorTaskHandle, (1<<0));
 
     ULOG_TRACE("Setup finished");
     vTaskDelete(NULL);
