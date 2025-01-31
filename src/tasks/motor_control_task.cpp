@@ -15,6 +15,8 @@ static setting<float> pid_kd;
 static setting<uint32_t> targetRPM;
 static setting<bool> enableMotor;
 
+#define TASK_LOG_NAME ("MotorTsk")
+
 void rpmToleranceCheck() {
     const uint32_t tgt = targetRPM.get();
     const uint32_t minMeasuredRPM = tgt - tgt * MEASURED_RPM_TOLERANCE_PERCENT;
@@ -26,17 +28,17 @@ void rpmToleranceCheck() {
     }
     if(status.stableTargetRPMCount >= MEASURED_RPM_STABILITY_INTERVAL_COUNT && !status.stableTargetRPM) {
         status.stableTargetRPM = true;
-        ULOG_DEBUG("measured RPM turned stable");
+        ULOG_DEBUG("%s: measured RPM turned stable", TASK_LOG_NAME);
         // rpmWithinToleranceIntervalsCnt may eventually overflow but with
         // it being a uint32_t that should be a long long long time
     } else if(status.stableTargetRPMCount < MEASURED_RPM_STABILITY_INTERVAL_COUNT && status.stableTargetRPM) {
         status.stableTargetRPM = false;
-        ULOG_DEBUG("measured RPM turned unstable");
+        ULOG_DEBUG("%s: measured RPM turned unstable", TASK_LOG_NAME);
     }
 }
 
 void motorControlTask(void* pvParameters) {
-    ULOG_TRACE("Starting motor control task");
+    ULOG_TRACE("%s: Starting", TASK_LOG_NAME);
     // Copies of settings objects
     pid_kp = runtimeSettings.pid_kp;
     pid_ki = runtimeSettings.pid_ki;
@@ -47,7 +49,7 @@ void motorControlTask(void* pvParameters) {
     // Initialize PID controller
     spid_t pid;
     if(SPID_SUCCESS != spid_init(&pid, pid_kp.get(), pid_ki.get(), pid_kd.get(), PID_MIN_OUT, PID_MAX_OUT, PID_INTERVAL_MS)) {
-        ULOG_CRITICAL("Failed to initialize PID controller");
+        ULOG_CRITICAL("%s: Failed to initialize PID controller", TASK_LOG_NAME);
         configASSERT(false);
     }
 
@@ -56,23 +58,26 @@ void motorControlTask(void* pvParameters) {
     const uint8_t pwmSliceNum = pwm_gpio_to_slice_num(PIN_MOTOR_PWM);
 
     TickType_t lastWakeTime = xTaskGetTickCount();
-    ULOG_TRACE("Starting motor control task loop");
+    ULOG_TRACE("%s: Starting loop", TASK_LOG_NAME);
     for(;;) {
         // First check for setting updates
         if(pid_kp != runtimeSettings.pid_kp){
-            ULOG_INFO("%s changed: %0.3f -> %0.3f", pid_kp.name, pid.k_p, runtimeSettings.pid_kp);
+            // ULOG_INFO("%s: %s changed: %0.3f -> %0.3f", TASK_LOG_NAME, pid_kp.name, pid.k_p, runtimeSettings.pid_kp);
             pid_kp = runtimeSettings.pid_kp;
             spid_set_kp(&pid, pid_kp.get());
         }
         if(pid_ki != runtimeSettings.pid_ki){
-            ULOG_INFO("%s changed: %0.3f -> %0.3f", pid_ki.name, pid.k_i, runtimeSettings.pid_ki);
+            // ULOG_INFO("%s: %s changed: %0.3f -> %0.3f", TASK_LOG_NAME, pid_ki.name, pid.k_i, runtimeSettings.pid_ki);
             pid_ki = runtimeSettings.pid_ki;
             spid_set_ki(&pid, pid_ki.get());
         }
         if(pid_kd != runtimeSettings.pid_kd){
-            ULOG_INFO("%s changed: %0.3f -> %0.3f", pid_kd.name, pid.k_d, runtimeSettings.pid_kd);
+            // ULOG_INFO("%s: %s changed: %0.3f -> %0.3f", TASK_LOG_NAME, pid_kd.name, pid.k_d, runtimeSettings.pid_kd);
             pid_kd = runtimeSettings.pid_ki;
             spid_set_kd(&pid, pid_kd.get());
+        }
+        if(targetRPM != runtimeSettings.targetRPM){
+            targetRPM = runtimeSettings.targetRPM;
         }
         if(enableMotor != runtimeSettings.enableMotor){
             enableMotor = runtimeSettings.enableMotor;

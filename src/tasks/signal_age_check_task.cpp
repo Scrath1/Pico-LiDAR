@@ -4,14 +4,14 @@
 #include "prj_config.h"
 #include "global.h"
 
-#define SIGNAL_LOCK_TIMEOUT 5
+#define TASK_LOG_NAME ("SigAgeChkTsk")
 
 TaskHandle_t signalAgeCheckTaskHandle;
 
 void signalAgeCheckTask(void* pvParameters){
-    ULOG_TRACE("Starting signal age check task");
+    ULOG_TRACE("%s: Starting", TASK_LOG_NAME);
     TickType_t lastWakeTime = xTaskGetTickCount();
-    ULOG_TRACE("Starting signal age check task loop");
+    ULOG_TRACE("%s: Starting loop", TASK_LOG_NAME);
     for(;;){
         if(status.measuredRPM.getAge_ms() > SIGNAL_MEASURED_RPM_AGE_THRESHOLD_MS){
             // measuredRPM signal is too old. Reset to 0

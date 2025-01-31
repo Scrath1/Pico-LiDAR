@@ -5,9 +5,11 @@
 #include "ulog.h"
 #include "serial_print.h"
 
+#define LOG_LOCATION_NAME ("SerCmds")
+
 bool parseCommand(const uint8_t* frame, uint8_t frameSize) {
     if(frame == NULL) {
-        ULOG_DEBUG("frame is NULL");
+        ULOG_DEBUG("%s: frame is NULL", LOG_LOCATION_NAME);
         return false;
     }
 
@@ -21,7 +23,7 @@ bool parseCommand(const uint8_t* frame, uint8_t frameSize) {
     // 1 byte for the command, 4 byte per parameter and 1 byte
     // for the final delimiter
     if((frameSize % 4) != 2) {
-        ULOG_DEBUG("Invalid command framesize: %u", frameSize);
+        ULOG_DEBUG("%s: Invalid command framesize: %u", LOG_LOCATION_NAME, frameSize);
         return false;
     }
 
@@ -29,7 +31,7 @@ bool parseCommand(const uint8_t* frame, uint8_t frameSize) {
     switch(cmd) {
         default:
         case CMD_NONE:
-            ULOG_ERROR("Command code is NONE");
+            ULOG_ERROR("%s: Command code is NONE", LOG_LOCATION_NAME);
             return false;
         case CMD_SET:
             return cmd_set(frame, frameSize);
@@ -51,19 +53,19 @@ uint32_t bytesToWord32(const uint8_t bytes[4]) {
 
 bool cmd_set(const uint8_t* frame, const uint32_t frameSize) {
     if(frame == NULL) {
-        ULOG_DEBUG("frame must not be NULL");
+        ULOG_DEBUG("%s: frame must not be NULL", LOG_LOCATION_NAME);
         return false;
     }
     // the set command expects 2 parameters, so the expected frameSize is
     // 1 + 2*4 + 1
     if((frameSize != 10 || frameSize == 0)) {
-        ULOG_DEBUG("Invalid framesize for cmd_set: %u", frameSize);
+        ULOG_DEBUG("%s: Invalid framesize for cmd_set: %u", LOG_LOCATION_NAME, frameSize);
         return false;
     }
 
     // sanity check that the function was called for the correct command
     if(frame[0] != CMD_SET) {
-        ULOG_DEBUG("cmd_set invalid cmd code: %u", frame[0]);
+        ULOG_DEBUG("%s: cmd_set invalid cmd code: %u", LOG_LOCATION_NAME, frame[0]);
         return false;
     }
 
@@ -72,48 +74,48 @@ bool cmd_set(const uint8_t* frame, const uint32_t frameSize) {
     uint32_t parameterValue = bytesToWord32(&(frame[5]));
     switch(tgtVar) {
         default:
-            ULOG_ERROR("Invalid parameter ID: %lu", tgtVar);
+            ULOG_ERROR("%s: Invalid parameter ID: %lu", LOG_LOCATION_NAME, tgtVar);
             return false;
         case ID_NONE:
-            ULOG_ERROR("Variable ID NONE received");
+            ULOG_ERROR("%s: Variable ID NONE received", LOG_LOCATION_NAME);
             return false;
         case ID_KP: {
             float kp = *(reinterpret_cast<float*>(&parameterValue));
             if(kp > PID_CONSTANT_MAX) {
-                ULOG_ERROR("K_P value too large: %0.3f", kp);
+                ULOG_ERROR("%s: K_P value too large: %0.3f",LOG_LOCATION_NAME, kp);
                 return false;
             } else {
-                ULOG_INFO("%s changed: %0.3f -> %0.3f", runtimeSettings.pid_kp.name, runtimeSettings.pid_kp.get(), kp);
+                ULOG_INFO("%s: %s changed: %0.3f -> %0.3f", LOG_LOCATION_NAME, runtimeSettings.pid_kp.name, runtimeSettings.pid_kp.get(), kp);
                 runtimeSettings.pid_kp.set(kp);
             }
         } break;
         case ID_KI: {
             float ki = *(reinterpret_cast<float*>(&parameterValue));
             if(ki > PID_CONSTANT_MAX) {
-                ULOG_ERROR("K_I value too large: %0.3f", ki);
+                ULOG_ERROR("%s: K_I value too large: %0.3f", LOG_LOCATION_NAME, ki);
                 return false;
             } else {
-                ULOG_INFO("%s changed: %0.3f -> %0.3f", runtimeSettings.pid_ki.name, runtimeSettings.pid_ki.get(), ki);
+                ULOG_INFO("%s: %s changed: %0.3f -> %0.3f", LOG_LOCATION_NAME, runtimeSettings.pid_ki.name, runtimeSettings.pid_ki.get(), ki);
                 runtimeSettings.pid_ki.set(ki);
             }
         } break;
         case ID_KD: {
             float kd = *(reinterpret_cast<float*>(&parameterValue));
             if(kd > PID_CONSTANT_MAX) {
-                ULOG_ERROR("K_D value too large: %0.3f", kd);
+                ULOG_ERROR("%s: K_D value too large: %0.3f", LOG_LOCATION_NAME, kd);
                 return false;
             } else {
-                ULOG_INFO("%s changed: %0.3f -> %0.3f", runtimeSettings.pid_kd.name, runtimeSettings.pid_kd.get(), kd);
+                ULOG_INFO("%s: %s changed: %0.3f -> %0.3f", LOG_LOCATION_NAME, runtimeSettings.pid_kd.name, runtimeSettings.pid_kd.get(), kd);
                 runtimeSettings.pid_kd.set(kd);
             }
         } break;
         case ID_TARGET_RPM: {
             uint32_t tgtRpm = parameterValue;
             if(tgtRpm > MAX_TARGET_RPM) {
-                ULOG_ERROR("Target RPM too large: %lu", parameterValue);
+                ULOG_ERROR("%s: Target RPM too large: %lu", LOG_LOCATION_NAME, parameterValue);
                 return false;
             } else {
-                ULOG_INFO("%s changed: %lu -> %lu", runtimeSettings.targetRPM.name, runtimeSettings.targetRPM.get(),
+                ULOG_INFO("%s: %s changed: %lu -> %lu", LOG_LOCATION_NAME, runtimeSettings.targetRPM.name, runtimeSettings.targetRPM.get(),
                           tgtRpm);
                 runtimeSettings.targetRPM.set(tgtRpm);
             }
@@ -121,7 +123,7 @@ bool cmd_set(const uint8_t* frame, const uint32_t frameSize) {
         case ID_ENABLE_MOTOR: {
             bool en = (bool)parameterValue;
             if(en != runtimeSettings.enableMotor.get()) {
-                ULOG_INFO("%s changed: %u -> %u", runtimeSettings.enableMotor.name, runtimeSettings.enableMotor.get(),
+                ULOG_INFO("%s: %s changed: %u -> %u", LOG_LOCATION_NAME, runtimeSettings.enableMotor.name, runtimeSettings.enableMotor.get(),
                           en);
                 runtimeSettings.enableMotor.set(en);
             }
@@ -132,19 +134,19 @@ bool cmd_set(const uint8_t* frame, const uint32_t frameSize) {
 
 bool cmd_get(const uint8_t* frame, const uint32_t frameSize) {
     if(frame == NULL) {
-        ULOG_DEBUG("frame must not be NULL");
+        ULOG_DEBUG("%s: frame must not be NULL", LOG_LOCATION_NAME);
         return false;
     }
     // The get command expects a frame length of 6
     // 1 + 4 + 1
     if((frameSize != 6 || frameSize == 0)) {
-        ULOG_DEBUG("Invalid framesize for cmd_get: %u", frameSize);
+        ULOG_DEBUG("%s: Invalid framesize for cmd_get: %u", LOG_LOCATION_NAME, frameSize);
         return false;
     }
 
     // sanity check that the function was called for the correct command
     if(frame[0] != CMD_GET) {
-        ULOG_DEBUG("cmd_get invalid cmd code: %u", frame[0]);
+        ULOG_DEBUG("%s: cmd_get invalid cmd code: %u", LOG_LOCATION_NAME, frame[0]);
         return false;
     }
 
@@ -152,10 +154,10 @@ bool cmd_get(const uint8_t* frame, const uint32_t frameSize) {
 
     switch(tgtVar) {
         default:
-            ULOG_ERROR("Invalid parameter ID: %lu", tgtVar);
+            ULOG_ERROR("%s: Invalid parameter ID: %lu", LOG_LOCATION_NAME, tgtVar);
             return false;
         case ID_NONE:
-            ULOG_ERROR("Variable ID NONE received");
+            ULOG_ERROR("%s: Variable ID NONE received", LOG_LOCATION_NAME);
             return false;
         case ID_KP:
             serialPrintf(">%s:%f\n", runtimeSettings.pid_kp.name, runtimeSettings.pid_kp.get());

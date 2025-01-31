@@ -163,27 +163,27 @@ void setup() {
     averaging_filter_init(&targetRPMFilter);
 
     // Pin configuration
-    ULOG_TRACE("Configuring pins");
+    ULOG_TRACE("Setup: Configuring pins");
     configurePins();
 
     // create tasks
-    ULOG_TRACE("Creating tasks");
-    ULOG_TRACE("Switching to Tx task for serial output");
+    ULOG_TRACE("Setup: Creating tasks");
+    ULOG_TRACE("Setup: Switching to Tx task for serial output");
     volatile bool txTaskReady = false;
     if(pdPASS != xTaskCreateAffinitySet(serialTxTask, SERIAL_TX_TASK_NAME, SERIAL_TX_TASK_STACK_SIZE,
                              (void*)(&txTaskReady), SERIAL_TX_TASK_PRIORITY, SERIAL_TX_TASK_CORE_MASK, &serialTxTaskHandle)) {
-        ULOG_CRITICAL("Failed to create serial Tx task");
+        ULOG_CRITICAL("Setup: Failed to create serial Tx task");
         configASSERT(false);
     }
     while(!txTaskReady){
         vTaskDelay(pdMS_TO_TICKS(10));
     }
     useTxTask = true;
-    ULOG_TRACE("Switch to Tx task done");
+    ULOG_TRACE("Setup: Switch to Tx task done");
 
     if(pdPASS != xTaskCreate(motorControlTask, MOTOR_CONTROL_TASK_NAME, MOTOR_CONTROL_TASK_STACK_SIZE,
                              NULL, MOTOR_CONTROL_TASK_PRIORITY, &motorCtrlTaskHandle)) {
-        ULOG_CRITICAL("Failed to create motor control task");
+        ULOG_CRITICAL("Setup: Failed to create motor control task");
         configASSERT(false);
     }
     vTaskCoreAffinitySet(motorCtrlTaskHandle, (1<<0));
@@ -191,26 +191,26 @@ void setup() {
     if(pdPASS != xTaskCreate(signalAgeCheckTask, SIGNAL_AGE_CHECK_TASK_NAME,
                              SIGNAL_AGE_CHECK_TASK_STACK_SIZE, NULL,
                              SIGNAL_AGE_CHECK_TASK_PRIORITY, &signalAgeCheckTaskHandle)) {
-        ULOG_CRITICAL("Failed to create signal age check task");
+        ULOG_CRITICAL("Setup: Failed to create signal age check task");
         configASSERT(false);
     }
     vTaskCoreAffinitySet(signalAgeCheckTaskHandle, (1<<0));
     if(pdPASS != xTaskCreate(serialInterfaceTask, SERIAL_INTERFACE_TASK_NAME,
                              SERIAL_INTERFACE_TASK_STACK_SIZE, NULL,
                              SERIAL_INTERFACE_TASK_PRIORITY, &serialInterfaceTaskHandle)) {
-        ULOG_CRITICAL("Failed to create serial interface task");
+        ULOG_CRITICAL("Setup: Failed to create serial interface task");
         configASSERT(false);
     }
     vTaskCoreAffinitySet(signalAgeCheckTaskHandle, (1<<0));
     // if(pdPASS != xTaskCreate(sensorTask, SENSOR_TASK_NAME,
     //                          SENSOR_TASK_STACK_SIZE, NULL,
     //                          SENSOR_TASK_PRIORITY, &sensorTaskHandle)) {
-    //     ULOG_CRITICAL("Failed to create sensor task");
+    //     ULOG_CRITICAL("Setup: Failed to create sensor task");
     //     configASSERT(false);
     // }
     // vTaskCoreAffinitySet(sensorTaskHandle, (1<<0));
 
-    ULOG_TRACE("Setup finished");
+    ULOG_TRACE("Setup: finished");
     vTaskDelete(NULL);
     taskYIELD();
     // This is done in the background by the arduino-pico core already

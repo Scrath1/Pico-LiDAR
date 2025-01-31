@@ -11,16 +11,18 @@
     #error "SERIAL_CMD_INPUT_TIMEOUT_MS should be larger than SERIAL_INTERFACE_TASK_INTERVAL_MS"
 #endif
 
+#define TASK_LOG_NAME ("SerIntfTsk")
+
 TaskHandle_t serialInterfaceTaskHandle;
 
 void serialInterfaceTask(void* pvParameters){
-    ULOG_TRACE("Starting serial interface task");
+    ULOG_TRACE("%s: Starting", TASK_LOG_NAME);
 
     // Command parser setup
     char serialCommandBuffer[SERIAL_CMD_INPUT_BUFFER_SIZE];
 
     TickType_t lastWakeTime = xTaskGetTickCount();
-    ULOG_TRACE("Starting serial interface task loop");
+    ULOG_TRACE("%s: Starting loop", TASK_LOG_NAME);
     char cmdInputBuffer[SERIAL_CMD_INPUT_BUFFER_SIZE];
     // Indicates the number of chars currently in cmdInputBuffer.
     uint32_t fillLevel = 0;
@@ -43,10 +45,10 @@ void serialInterfaceTask(void* pvParameters){
             }
             if(c == CMD_END_DELIMITER){
                 if(parseCommand((uint8_t*)cmdInputBuffer, fillLevel)){
-                    ULOG_INFO("Command executed successfully");
+                    ULOG_INFO("%s: Command executed successfully", TASK_LOG_NAME);
                 }
                 else{
-                    ULOG_ERROR("Failed to parse command");
+                    ULOG_ERROR("%s: Failed to parse command", TASK_LOG_NAME);
                 }
                 // clear buffer
                 memset(cmdInputBuffer, 0, fillLevel);

@@ -8,6 +8,8 @@
 #include "ring_buffer.h"
 #include "serial_print.h"
 
+#define TASK_LOG_NAME ("SerTxTsk")
+
 RING_BUFFER_DEF(txBuffer, TX_BUFFER_LEN + 1);
 TaskHandle_t serialTxTaskHandle;
 
@@ -23,19 +25,20 @@ void putString(const char* str, uint32_t strLen) {
 }
 
 void serialTxTask(void* pvParameters) {
+    ULOG_TRACE("%s: Starting", TASK_LOG_NAME);
     volatile bool* txTaskReady = (bool*)(pvParameters);
     if(RC_SUCCESS != ring_buffer_init(&txBuffer)) {
-        ULOG_CRITICAL("Failed to initialize serial tx ringbuffer");
+        ULOG_CRITICAL("%s: Failed to initialize serial tx ringbuffer", TASK_LOG_NAME);
         configASSERT(false);
     }
     putStringMutex = xSemaphoreCreateMutex();
     if(NULL == putStringMutex){
-        ULOG_CRITICAL("Failed to create mutex for putString function");
+        ULOG_CRITICAL("%s: Failed to create mutex for putString function", TASK_LOG_NAME);
         configASSERT(false);
     }
 
     *txTaskReady = true;
-    ULOG_TRACE("Starting Serial Tx task loop");
+    ULOG_TRACE("%s: Starting loop", TASK_LOG_NAME);
     for(;;) {
         char c = 0;
         RC_t err = RC_ERROR;
