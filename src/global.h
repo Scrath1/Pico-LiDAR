@@ -6,4 +6,4 @@
 extern runtime_settings_t runtimeSettings;
 extern status_t status;
 
-#endif // GLOBAL_H
+#endif  // GLOBAL_H

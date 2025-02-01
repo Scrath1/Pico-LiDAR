@@ -1,8 +1,7 @@
 #ifndef RETURN_CODES_H
 #define RETURN_CODES_H
 
-typedef enum
-{
+typedef enum {
     RC_SUCCESS = 0,                 /**< \brief Function was successfully completed.                            	*/
     RC_ERROR = -1,                  /**< \brief Non specific error.                                             	*/
     RC_ERROR_NULL = -2,             /**< \brief A pointer was NULL when a non-NULL pointer was expected.        	*/
@@ -32,4 +31,4 @@ typedef enum
     RC_ERROR_LIB = -26,             /**< \brief A library call returned an error                   */
 } RC_t;
 
-#endif // RETURN_CODES_H
+#endif  // RETURN_CODES_H

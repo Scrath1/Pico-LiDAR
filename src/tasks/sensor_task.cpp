@@ -19,24 +19,22 @@ static setting<uint32_t> targetRPM;
 static setting<uint32_t> vl53l0xTimingBudget_us;
 static setting<uint16_t> dataPointsPerRev;
 
-uint32_t rpmToTimePerRev_ms(uint16_t rpm){
-    return (1000/(rpm/60));
-}
+uint32_t rpmToTimePerRev_ms(uint16_t rpm) { return (1000 / (rpm / 60)); }
 
-uint16_t scantimeInterval_ms(uint32_t timePerRev_ms, uint16_t scanpointsPerRev){
+uint16_t scantimeInterval_ms(uint32_t timePerRev_ms, uint16_t scanpointsPerRev) {
     return timePerRev_ms / scanpointsPerRev;
 }
 
-uint16_t checkMaxScanpointsPerRev(uint16_t rpm, uint32_t scantimeBudget_ms, uint16_t scanpointsPerRev){
+uint16_t checkMaxScanpointsPerRev(uint16_t rpm, uint32_t scantimeBudget_ms, uint16_t scanpointsPerRev) {
     uint32_t timePerRotation_ms = rpmToTimePerRev_ms(rpm);
     uint32_t timePerScan_ms = 0;
-    while(true){
+    while(true) {
         if(scanpointsPerRev == 0) return 0;
         timePerScan_ms = scantimeInterval_ms(timePerRotation_ms, scanpointsPerRev);
-        if(timePerScan_ms < scantimeBudget_ms){
+        if(timePerScan_ms < scantimeBudget_ms) {
             scanpointsPerRev--;
-        }
-        else return scanpointsPerRev;
+        } else
+            return scanpointsPerRev;
     }
 }
 
@@ -88,13 +86,15 @@ void sensorTask(void* pvParameters) {
         }
 
         // ToDo: Maybe outsource this step to another point
-        uint16_t checkedMaxScanpoints = checkMaxScanpointsPerRev(targetRPM.get(), vl53l0xTimingBudget_us.get() / 1000, dataPointsPerRev.get());
-        if(checkedMaxScanpoints < dataPointsPerRev.get()){
+        uint16_t checkedMaxScanpoints =
+            checkMaxScanpointsPerRev(targetRPM.get(), vl53l0xTimingBudget_us.get() / 1000, dataPointsPerRev.get());
+        if(checkedMaxScanpoints < dataPointsPerRev.get()) {
             runtimeSettings.dataPointsPerRev.set(checkedMaxScanpoints);
             uint32_t rotationPeriod_ms = rpmToTimePerRev_ms(targetRPM.get());
             uint32_t taskInterval_ms = scantimeInterval_ms(rotationPeriod_ms, checkedMaxScanpoints);
             status.sensorTaskInterval_ms = taskInterval_ms;
-            // ULOG_DEBUG("rpm:%lu, datapoints:%u => intv:%lu", targetRPM.get(), dataPointsPerRev.get(), taskInterval_ms);
+            // ULOG_DEBUG("rpm:%lu, datapoints:%u => intv:%lu", targetRPM.get(), dataPointsPerRev.get(),
+            // taskInterval_ms);
         }
 
         // Actual range reading

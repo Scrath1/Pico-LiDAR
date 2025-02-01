@@ -1,10 +1,11 @@
 #ifndef DOME_ANGLE_H
 #define DOME_ANGLE_H
 
-#include "prj_config.h"
 #include <pico/stdlib.h>
 
-typedef struct{
+#include "prj_config.h"
+
+typedef struct {
     // stores the base angle as determined by hall sensor pulses
     // in 90 degree steps with rollover at 360 degree => [0, 90, 180, 270, 0 ...]
     uint16_t angleBase;
@@ -19,7 +20,7 @@ typedef struct{
      * @param domeRPM [IN] Rotation speed of dome
      * @return expected current angle of dome in degrees
      */
-    inline uint16_t calculateCurrentAngle(uint32_t domeRPM){
+    inline uint16_t calculateCurrentAngle(uint32_t domeRPM) {
         const uint32_t curTime_us = time_us_32();
         // calculate time in us for a full rotation
         const uint32_t fullRotationTime_us = 1e6 / (domeRPM / 60);
@@ -31,4 +32,4 @@ typedef struct{
     }
 } dome_angle_t;
 
-#endif // DOME_ANGLE_H
+#endif  // DOME_ANGLE_H

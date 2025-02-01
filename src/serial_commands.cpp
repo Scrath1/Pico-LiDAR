@@ -2,8 +2,8 @@
 
 #include "global.h"
 #include "prj_config.h"
-#include "ulog.h"
 #include "serial_print.h"
+#include "ulog.h"
 
 #define LOG_LOCATION_NAME ("SerCmds")
 
@@ -82,10 +82,11 @@ bool cmd_set(const uint8_t* frame, const uint32_t frameSize) {
         case ID_KP: {
             float kp = *(reinterpret_cast<float*>(&parameterValue));
             if(kp > PID_CONSTANT_MAX) {
-                ULOG_ERROR("%s: K_P value too large: %0.3f",LOG_LOCATION_NAME, kp);
+                ULOG_ERROR("%s: K_P value too large: %0.3f", LOG_LOCATION_NAME, kp);
                 return false;
             } else {
-                ULOG_INFO("%s: %s changed: %0.3f -> %0.3f", LOG_LOCATION_NAME, runtimeSettings.pid_kp.name, runtimeSettings.pid_kp.get(), kp);
+                ULOG_INFO("%s: %s changed: %0.3f -> %0.3f", LOG_LOCATION_NAME, runtimeSettings.pid_kp.name,
+                          runtimeSettings.pid_kp.get(), kp);
                 runtimeSettings.pid_kp.set(kp);
             }
         } break;
@@ -95,7 +96,8 @@ bool cmd_set(const uint8_t* frame, const uint32_t frameSize) {
                 ULOG_ERROR("%s: K_I value too large: %0.3f", LOG_LOCATION_NAME, ki);
                 return false;
             } else {
-                ULOG_INFO("%s: %s changed: %0.3f -> %0.3f", LOG_LOCATION_NAME, runtimeSettings.pid_ki.name, runtimeSettings.pid_ki.get(), ki);
+                ULOG_INFO("%s: %s changed: %0.3f -> %0.3f", LOG_LOCATION_NAME, runtimeSettings.pid_ki.name,
+                          runtimeSettings.pid_ki.get(), ki);
                 runtimeSettings.pid_ki.set(ki);
             }
         } break;
@@ -105,7 +107,8 @@ bool cmd_set(const uint8_t* frame, const uint32_t frameSize) {
                 ULOG_ERROR("%s: K_D value too large: %0.3f", LOG_LOCATION_NAME, kd);
                 return false;
             } else {
-                ULOG_INFO("%s: %s changed: %0.3f -> %0.3f", LOG_LOCATION_NAME, runtimeSettings.pid_kd.name, runtimeSettings.pid_kd.get(), kd);
+                ULOG_INFO("%s: %s changed: %0.3f -> %0.3f", LOG_LOCATION_NAME, runtimeSettings.pid_kd.name,
+                          runtimeSettings.pid_kd.get(), kd);
                 runtimeSettings.pid_kd.set(kd);
             }
         } break;
@@ -115,16 +118,16 @@ bool cmd_set(const uint8_t* frame, const uint32_t frameSize) {
                 ULOG_ERROR("%s: Target RPM too large: %lu", LOG_LOCATION_NAME, parameterValue);
                 return false;
             } else {
-                ULOG_INFO("%s: %s changed: %lu -> %lu", LOG_LOCATION_NAME, runtimeSettings.targetRPM.name, runtimeSettings.targetRPM.get(),
-                          tgtRpm);
+                ULOG_INFO("%s: %s changed: %lu -> %lu", LOG_LOCATION_NAME, runtimeSettings.targetRPM.name,
+                          runtimeSettings.targetRPM.get(), tgtRpm);
                 runtimeSettings.targetRPM.set(tgtRpm);
             }
         } break;
         case ID_ENABLE_MOTOR: {
             bool en = (bool)parameterValue;
             if(en != runtimeSettings.enableMotor.get()) {
-                ULOG_INFO("%s: %s changed: %u -> %u", LOG_LOCATION_NAME, runtimeSettings.enableMotor.name, runtimeSettings.enableMotor.get(),
-                          en);
+                ULOG_INFO("%s: %s changed: %u -> %u", LOG_LOCATION_NAME, runtimeSettings.enableMotor.name,
+                          runtimeSettings.enableMotor.get(), en);
                 runtimeSettings.enableMotor.set(en);
             }
         } break;

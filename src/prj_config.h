@@ -66,8 +66,7 @@
 #define SERIAL_CMD_INPUT_TIMEOUT_MS (500)
 // Maximum length of a debug message
 #define DBG_MESSAGE_MAX_LEN (256)
-#define TX_BUFFER_LEN (10*DBG_MESSAGE_MAX_LEN)
-
+#define TX_BUFFER_LEN (10 * DBG_MESSAGE_MAX_LEN)
 
 // SENSOR CONFIGURATION
 // ==============================================================
@@ -84,4 +83,4 @@
 // How old the measuredRPM signal is allowed to be before it is invalidated
 #define SIGNAL_MEASURED_RPM_AGE_THRESHOLD_MS (PID_INTERVAL_MS / PULSES_PER_REV * 2)
 
-#endif // PRJ_CONFIG_H
+#endif  // PRJ_CONFIG_H

@@ -10,7 +10,7 @@
  * followed by however many parameters this specific command needs
  * and finished using a delimiter byte containing the ASCII code for '\n'
  * Parameter bytes are ordered MSB to LSB
- * 
+ *
  * Table generated using https://ozh.github.io/ascii-tables/
  * +-------------+-------------+-------+-------------+-----------+
  * | Instruction | Parameter 1 |  ...  | Parameter n | Delimiter |
@@ -19,22 +19,11 @@
  * +-------------+-------------+-------+-------------+-----------+
  */
 
-typedef enum{
-    CMD_NONE = 0,
-    CMD_SET = 1,
-    CMD_GET = 2
-} cmd_instruction_t;
-    
-typedef enum{
-    ID_NONE = 0,
-    ID_KP = 1,
-    ID_KI = 2,
-    ID_KD = 3,
-    ID_TARGET_RPM = 4,
-    ID_ENABLE_MOTOR = 5
-} parameter_id_t;
+typedef enum { CMD_NONE = 0, CMD_SET = 1, CMD_GET = 2 } cmd_instruction_t;
 
-typedef struct{
+typedef enum { ID_NONE = 0, ID_KP = 1, ID_KI = 2, ID_KD = 3, ID_TARGET_RPM = 4, ID_ENABLE_MOTOR = 5 } parameter_id_t;
+
+typedef struct {
     cmd_instruction_t instruction;
     uint32_t numOfParams;
 } serial_command_t;
@@ -50,4 +39,4 @@ bool cmd_set(const uint8_t* frame, const uint32_t frameSize);
 
 bool cmd_get(const uint8_t* frame, const uint32_t frameSize);
 
-#endif // SERIAL_COMMANDS_H
+#endif  // SERIAL_COMMANDS_H

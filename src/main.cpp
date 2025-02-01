@@ -1,23 +1,23 @@
 #include <Arduino.h>
 #include <FreeRTOS.h>
 #include <hardware/gpio.h>
-#include <pico/stdlib.h>
 #include <hardware/pwm.h>
+#include <pico/stdlib.h>
 #include <queue.h>
 #include <task.h>
 #include <ulog.h>
 
+#include "averaging_filter.h"
+#include "global.h"
 #include "macros.h"
 #include "prj_config.h"
-#include "global.h"
+#include "serial_print.h"
 #include "spid.h"
 #include "tasks/motor_control_task.h"
-#include "tasks/signal_age_check_task.h"
-#include "tasks/serial_interface_task.h"
 #include "tasks/sensor_task.h"
+#include "tasks/serial_interface_task.h"
 #include "tasks/serial_tx_task.h"
-#include "averaging_filter.h"
-#include "serial_print.h"
+#include "tasks/signal_age_check_task.h"
 
 #define TARGET_RPM_MIN_THRESHOLD (60)
 #define TARGET_RPM_FILTER_SIZE (16)
@@ -30,18 +30,17 @@ void consoleLogger(ulog_level_t severity, char* msg) {
     char fmsg[DBG_MESSAGE_MAX_LEN];
     uint32_t len = snprintf(fmsg, sizeof(fmsg), "%10lu [%s]: %s\n", pdTICKS_TO_MS(xTaskGetTickCount()),
                             ulog_level_name(severity), msg);
-    serialPrint(fmsg, len+1);
+    serialPrint(fmsg, len + 1);
 }
 
-void hallSensorISR(uint32_t events){
-    if(events & GPIO_IRQ_EDGE_RISE){
+void hallSensorISR(uint32_t events) {
+    if(events & GPIO_IRQ_EDGE_RISE) {
         // signal detection visualization using LED
         digitalWrite(PIN_LED_USER, LED_OFF);
-    }
-    else if(events & GPIO_IRQ_EDGE_FALL){
+    } else if(events & GPIO_IRQ_EDGE_FALL) {
         static uint32_t lastPulseTime_us = 0;
         static uint32_t pulseIntervals[PULSES_PER_REV] = {0};
-        const uint32_t pulseIntervalsArrSize = sizeof(pulseIntervals)/sizeof(pulseIntervals[0]);
+        const uint32_t pulseIntervalsArrSize = sizeof(pulseIntervals) / sizeof(pulseIntervals[0]);
         // points to next index to write to
         static uint32_t pulseIntervalsNextIdx = 0;
 
@@ -55,11 +54,10 @@ void hallSensorISR(uint32_t events){
         dome_angle_t da = status.domeAngle;
         // modify
         uint16_t newAngleBase;
-        if(!gpio_get(PIN_ZERO_HALL_SENSOR)){
+        if(!gpio_get(PIN_ZERO_HALL_SENSOR)) {
             // Zero angle detected
             newAngleBase = 0;
-        }
-        else{
+        } else {
             newAngleBase = (da.angleBase + (360 / PULSES_PER_REV));
         }
         dome_angle_t newAngPos = {.angleBase = newAngleBase, .timeOfAngleIncrement_us = currentTime_us};
@@ -67,7 +65,7 @@ void hallSensorISR(uint32_t events){
         status.domeAngle = da;
 
         // initialize variable before measuring
-        if(lastPulseTime_us == 0){
+        if(lastPulseTime_us == 0) {
             lastPulseTime_us = time_us_32();
             return;
         }
@@ -84,14 +82,14 @@ void hallSensorISR(uint32_t events){
         // with the averaging filter used above results in extreme spikes in measurements
         // ToDo: Find reason and fix
         static uint32_t rpmMeasurements[RPM_AVERAGING_FILTER_SIZE];
-        static const uint32_t rpmMeasurementsSize = sizeof(rpmMeasurements)/sizeof(rpmMeasurements[0]);
+        static const uint32_t rpmMeasurementsSize = sizeof(rpmMeasurements) / sizeof(rpmMeasurements[0]);
         static uint32_t rpmMeasurementsNextIdx = 0;
-        uint32_t currentRPMMeasurement = (1/((float)averageInterval_us / 1E6)) * 60 * PULSES_PER_REV;
+        uint32_t currentRPMMeasurement = (1 / ((float)averageInterval_us / 1E6)) * 60 * PULSES_PER_REV;
         rpmMeasurements[rpmMeasurementsNextIdx] = currentRPMMeasurement;
-        rpmMeasurementsNextIdx = (rpmMeasurementsNextIdx+1) % rpmMeasurementsNextIdx;
+        rpmMeasurementsNextIdx = (rpmMeasurementsNextIdx + 1) % rpmMeasurementsNextIdx;
 
         uint32_t avgRPM = 0;
-        for(uint32_t i = 0; i < rpmMeasurementsSize; i++){
+        for(uint32_t i = 0; i < rpmMeasurementsSize; i++) {
             avgRPM += rpmMeasurements[i];
         }
         avgRPM /= rpmMeasurementsSize;
@@ -101,10 +99,10 @@ void hallSensorISR(uint32_t events){
     }
 }
 
-void pushBtnLeftISR(BaseType_t& xHigherPriorityTaskWoken){
+void pushBtnLeftISR(BaseType_t& xHigherPriorityTaskWoken) {
     static uint32_t lastTriggerTime_ms = 0;
     const uint32_t currentTime_ms = xTaskGetTickCountFromISR();
-    if(currentTime_ms - lastTriggerTime_ms > BTN_DEBOUNCE_MS){
+    if(currentTime_ms - lastTriggerTime_ms > BTN_DEBOUNCE_MS) {
         // button isn't bouncing (anymore)
         runtimeSettings.enableMotor.set(!runtimeSettings.enableMotor.get());
     }
@@ -113,22 +111,25 @@ void pushBtnLeftISR(BaseType_t& xHigherPriorityTaskWoken){
 
 void gpio_callback(uint gpio, uint32_t events) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    if(gpio == PIN_SPEED_HALL_SENSOR) hallSensorISR(events);
-    else if(gpio == PIN_PUSHBTN_LEFT) pushBtnLeftISR(xHigherPriorityTaskWoken);
+    if(gpio == PIN_SPEED_HALL_SENSOR)
+        hallSensorISR(events);
+    else if(gpio == PIN_PUSHBTN_LEFT)
+        pushBtnLeftISR(xHigherPriorityTaskWoken);
 
-    if(xHigherPriorityTaskWoken){
+    if(xHigherPriorityTaskWoken) {
         portYIELD_FROM_ISR(pdTRUE);
     }
 }
 
-void configurePins(){
+void configurePins() {
     pinMode(PIN_PUSHBTN_LEFT, INPUT);
     pinMode(PIN_LED_USER, OUTPUT);
     digitalWrite(PIN_LED_USER, 1);
 
     gpio_init(PIN_SPEED_HALL_SENSOR);
     gpio_set_dir(PIN_SPEED_HALL_SENSOR, GPIO_IN);
-    gpio_set_irq_enabled_with_callback(PIN_SPEED_HALL_SENSOR, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, gpio_callback);
+    gpio_set_irq_enabled_with_callback(PIN_SPEED_HALL_SENSOR, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true,
+                                       gpio_callback);
 
     gpio_init(PIN_ZERO_HALL_SENSOR);
     gpio_set_dir(PIN_ZERO_HALL_SENSOR, GPIO_IN);
@@ -171,37 +172,36 @@ void setup() {
     ULOG_TRACE("Setup: Switching to Tx task for serial output");
     volatile bool txTaskReady = false;
     if(pdPASS != xTaskCreateAffinitySet(serialTxTask, SERIAL_TX_TASK_NAME, SERIAL_TX_TASK_STACK_SIZE,
-                             (void*)(&txTaskReady), SERIAL_TX_TASK_PRIORITY, SERIAL_TX_TASK_CORE_MASK, &serialTxTaskHandle)) {
+                                        (void*)(&txTaskReady), SERIAL_TX_TASK_PRIORITY, SERIAL_TX_TASK_CORE_MASK,
+                                        &serialTxTaskHandle)) {
         ULOG_CRITICAL("Setup: Failed to create serial Tx task");
         configASSERT(false);
     }
-    while(!txTaskReady){
+    while(!txTaskReady) {
         vTaskDelay(pdMS_TO_TICKS(10));
     }
     useTxTask = true;
     ULOG_TRACE("Setup: Switch to Tx task done");
 
-    if(pdPASS != xTaskCreate(motorControlTask, MOTOR_CONTROL_TASK_NAME, MOTOR_CONTROL_TASK_STACK_SIZE,
-                             NULL, MOTOR_CONTROL_TASK_PRIORITY, &motorCtrlTaskHandle)) {
+    if(pdPASS != xTaskCreate(motorControlTask, MOTOR_CONTROL_TASK_NAME, MOTOR_CONTROL_TASK_STACK_SIZE, NULL,
+                             MOTOR_CONTROL_TASK_PRIORITY, &motorCtrlTaskHandle)) {
         ULOG_CRITICAL("Setup: Failed to create motor control task");
         configASSERT(false);
     }
-    vTaskCoreAffinitySet(motorCtrlTaskHandle, (1<<0));
+    vTaskCoreAffinitySet(motorCtrlTaskHandle, (1 << 0));
 
-    if(pdPASS != xTaskCreate(signalAgeCheckTask, SIGNAL_AGE_CHECK_TASK_NAME,
-                             SIGNAL_AGE_CHECK_TASK_STACK_SIZE, NULL,
+    if(pdPASS != xTaskCreate(signalAgeCheckTask, SIGNAL_AGE_CHECK_TASK_NAME, SIGNAL_AGE_CHECK_TASK_STACK_SIZE, NULL,
                              SIGNAL_AGE_CHECK_TASK_PRIORITY, &signalAgeCheckTaskHandle)) {
         ULOG_CRITICAL("Setup: Failed to create signal age check task");
         configASSERT(false);
     }
-    vTaskCoreAffinitySet(signalAgeCheckTaskHandle, (1<<0));
-    if(pdPASS != xTaskCreate(serialInterfaceTask, SERIAL_INTERFACE_TASK_NAME,
-                             SERIAL_INTERFACE_TASK_STACK_SIZE, NULL,
+    vTaskCoreAffinitySet(signalAgeCheckTaskHandle, (1 << 0));
+    if(pdPASS != xTaskCreate(serialInterfaceTask, SERIAL_INTERFACE_TASK_NAME, SERIAL_INTERFACE_TASK_STACK_SIZE, NULL,
                              SERIAL_INTERFACE_TASK_PRIORITY, &serialInterfaceTaskHandle)) {
         ULOG_CRITICAL("Setup: Failed to create serial interface task");
         configASSERT(false);
     }
-    vTaskCoreAffinitySet(signalAgeCheckTaskHandle, (1<<0));
+    vTaskCoreAffinitySet(signalAgeCheckTaskHandle, (1 << 0));
     // if(pdPASS != xTaskCreate(sensorTask, SENSOR_TASK_NAME,
     //                          SENSOR_TASK_STACK_SIZE, NULL,
     //                          SENSOR_TASK_PRIORITY, &sensorTaskHandle)) {
@@ -215,7 +215,6 @@ void setup() {
     taskYIELD();
     // This is done in the background by the arduino-pico core already
     // vTaskStartScheduler();
-    
 }
 
 void loop() {}

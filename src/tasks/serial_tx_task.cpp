@@ -16,8 +16,8 @@ TaskHandle_t serialTxTaskHandle;
 SemaphoreHandle_t putStringMutex;
 
 void putString(const char* str, uint32_t strLen) {
-    if(pdPASS == xSemaphoreTake(putStringMutex, portMAX_DELAY)){
-        for(uint32_t i = 0; i < strLen-1; i++) {
+    if(pdPASS == xSemaphoreTake(putStringMutex, portMAX_DELAY)) {
+        for(uint32_t i = 0; i < strLen - 1; i++) {
             ring_buffer_put(&txBuffer, str[i], portMAX_DELAY);
         }
         xSemaphoreGive(putStringMutex);
@@ -32,7 +32,7 @@ void serialTxTask(void* pvParameters) {
         configASSERT(false);
     }
     putStringMutex = xSemaphoreCreateMutex();
-    if(NULL == putStringMutex){
+    if(NULL == putStringMutex) {
         ULOG_CRITICAL("%s: Failed to create mutex for putString function", TASK_LOG_NAME);
         configASSERT(false);
     }
