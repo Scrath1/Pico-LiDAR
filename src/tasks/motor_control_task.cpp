@@ -19,8 +19,21 @@ static setting<bool> enableMotor;
 
 void rpmToleranceCheck() {
     const uint32_t tgt = targetRPM.get();
-    const uint32_t minMeasuredRPM = tgt - tgt * MEASURED_RPM_TOLERANCE_PERCENT;
-    const uint32_t maxMeasuredRPM = tgt + tgt * MEASURED_RPM_TOLERANCE_PERCENT;
+
+    uint32_t minMeasuredRPM;
+    if(tgt > MEASURED_RPM_TOLERANCE){
+        minMeasuredRPM = tgt - MEASURED_RPM_TOLERANCE;
+    }
+    else{
+        minMeasuredRPM = 0;
+    }
+    uint32_t maxMeasuredRPM;
+    if(tgt < UINT32_MAX - MEASURED_RPM_TOLERANCE){
+        maxMeasuredRPM = tgt + MEASURED_RPM_TOLERANCE;
+    }
+    else{
+        maxMeasuredRPM = UINT32_MAX;
+    }
     if(minMeasuredRPM <= status.measuredRPM.rpm && status.measuredRPM.rpm <= maxMeasuredRPM) {
         status.stableTargetRPMCount++;
     } else {

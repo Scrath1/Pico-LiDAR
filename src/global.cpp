@@ -8,7 +8,7 @@ runtime_settings_t runtimeSettings = {
     .pid_kd = {K_D, "K_d"},
     .targetRPM = {MOTOR_TARGET_SPEED, "targetRPM"},
     .enableMotor = {0, "enableMotor"},
-    .vl53l0xMeasurementTimingBudget_us = {RANGE_ACQUISITION_TIME_BUDGET_MS * 1000, "VL53L0X_Measurement_Budget"},
+    .vl53l0xMeasurementTimingBudget_us = {VL53L0X_TIME_BUDGET_MS * 1000, "VL53L0X_Measurement_Budget"},
     .dataPointsPerRev = {DEFAULT_SCANPOINTS_PER_REV, "scanpoints"}};
 
 // will be handled at runtime. Only do a zero initialization

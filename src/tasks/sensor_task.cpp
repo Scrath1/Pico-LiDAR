@@ -21,21 +21,30 @@ static setting<uint16_t> dataPointsPerRev;
 
 uint32_t rpmToTimePerRev_ms(uint16_t rpm) { return (1000 / (rpm / 60)); }
 
-uint16_t scantimeInterval_ms(uint32_t timePerRev_ms, uint16_t scanpointsPerRev) {
-    return timePerRev_ms / scanpointsPerRev;
+// Calculates the minimum time to set aside for sampling at each datapoint
+// Based on the timing budget of the sensors + some configurable tolerance
+// (SENSOR_SCAN_EXTRA_TIME_BUDGET_MS)
+uint32_t getMinSampleTime_ms(uint32_t vl53l0x_budget_ms){
+    return vl53l0x_budget_ms + SENSOR_SCAN_EXTRA_TIME_BUDGET_MS;
 }
 
-uint16_t checkMaxScanpointsPerRev(uint16_t rpm, uint32_t scantimeBudget_ms, uint16_t scanpointsPerRev) {
-    uint32_t timePerRotation_ms = rpmToTimePerRev_ms(rpm);
-    uint32_t timePerScan_ms = 0;
-    while(true) {
-        if(scanpointsPerRev == 0) return 0;
-        timePerScan_ms = scantimeInterval_ms(timePerRotation_ms, scanpointsPerRev);
-        if(timePerScan_ms < scantimeBudget_ms) {
-            scanpointsPerRev--;
-        } else
-            return scanpointsPerRev;
+// calculate the maximum time that can ideally be spent for each sample point.
+// Based on the current target RPM and the number of sample points
+uint32_t getMaxSampleTime_ms(uint16_t rpm, uint32_t samplePoints){
+    return (rpmToTimePerRev_ms(rpm)) / samplePoints;
+}
+
+uint16_t checkMaxScanpointsPerRev(uint16_t rpm, uint32_t samplePoints, uint32_t vl53l0x_budget_ms){
+    // reduce the number of sample points until the minimum time required to sample
+    // is below the maximum time available for each range sample
+    while(true){
+        if(samplePoints == 0) return 0;
+        uint32_t t_min = getMinSampleTime_ms(vl53l0x_budget_ms);
+        uint32_t t_max = getMaxSampleTime_ms(rpm, samplePoints);
+        if(t_min > t_max) samplePoints--;
+        else break;
     }
+    return samplePoints;
 }
 
 void sensorTask(void* pvParameters) {
@@ -86,15 +95,13 @@ void sensorTask(void* pvParameters) {
         }
 
         // ToDo: Maybe outsource this step to another point
-        uint16_t checkedMaxScanpoints =
-            checkMaxScanpointsPerRev(targetRPM.get(), vl53l0xTimingBudget_us.get() / 1000, dataPointsPerRev.get());
+        uint16_t checkedMaxScanpoints = checkMaxScanpointsPerRev(targetRPM.get(), dataPointsPerRev.get(), vl53l0xTimingBudget_us.get() / 1000);
         if(checkedMaxScanpoints < dataPointsPerRev.get()) {
             runtimeSettings.dataPointsPerRev.set(checkedMaxScanpoints);
             uint32_t rotationPeriod_ms = rpmToTimePerRev_ms(targetRPM.get());
-            uint32_t taskInterval_ms = scantimeInterval_ms(rotationPeriod_ms, checkedMaxScanpoints);
+            uint32_t taskInterval_ms = rotationPeriod_ms / checkedMaxScanpoints;
             status.sensorTaskInterval_ms = taskInterval_ms;
-            // ULOG_DEBUG("rpm:%lu, datapoints:%u => intv:%lu", targetRPM.get(), dataPointsPerRev.get(),
-            // taskInterval_ms);
+            ULOG_WARNING("%s: Sample rate unattainable. Reduced scanpoints to %u", TASK_LOG_NAME, checkedMaxScanpoints);
         }
 
         // Actual range reading

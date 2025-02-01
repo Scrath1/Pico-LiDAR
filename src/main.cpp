@@ -142,7 +142,7 @@ void configurePins() {
     gpio_set_function(PIN_MOTOR_PWM, GPIO_FUNC_PWM);
     uint8_t pwmSlice = pwm_gpio_to_slice_num(PIN_MOTOR_PWM);
     uint8_t pwmChan = pwm_gpio_to_channel(PIN_MOTOR_PWM);
-    pwm_set_wrap(pwmSlice, 255);
+    pwm_set_wrap(pwmSlice, PWM_FULL_VALUE);
     pwm_set_chan_level(pwmSlice, pwmChan, 0);
     pwm_set_enabled(pwmSlice, true);
 }
@@ -202,13 +202,13 @@ void setup() {
         configASSERT(false);
     }
     vTaskCoreAffinitySet(signalAgeCheckTaskHandle, (1 << 0));
-    // if(pdPASS != xTaskCreate(sensorTask, SENSOR_TASK_NAME,
-    //                          SENSOR_TASK_STACK_SIZE, NULL,
-    //                          SENSOR_TASK_PRIORITY, &sensorTaskHandle)) {
-    //     ULOG_CRITICAL("Setup: Failed to create sensor task");
-    //     configASSERT(false);
-    // }
-    // vTaskCoreAffinitySet(sensorTaskHandle, (1<<0));
+    if(pdPASS != xTaskCreate(sensorTask, SENSOR_TASK_NAME,
+                             SENSOR_TASK_STACK_SIZE, NULL,
+                             SENSOR_TASK_PRIORITY, &sensorTaskHandle)) {
+        ULOG_CRITICAL("Setup: Failed to create sensor task");
+        configASSERT(false);
+    }
+    vTaskCoreAffinitySet(sensorTaskHandle, (1<<0));
 
     ULOG_TRACE("Setup: finished");
     vTaskDelete(NULL);
