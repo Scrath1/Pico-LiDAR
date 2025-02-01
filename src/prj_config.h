@@ -22,7 +22,7 @@
 // Maximum target speed for the motor
 #define MAX_TARGET_RPM (1000)
 // Default motor rotation target speed
-#define MOTOR_TARGET_SPEED (150)
+#define MOTOR_TARGET_SPEED (200)
 // Defines the value which represents a PWM duty cycle of 100%
 #define PWM_FULL_VALUE (1024)
 // PID control P constant
@@ -45,7 +45,7 @@
 // the +- range by which the measured RPM may differ from the
 // target RPM over MEASURED_RPM_STABILITY_INTERVAL_COUNT PID control
 // intervals for the speed to be considered stable
-#define MEASURED_RPM_TOLERANCE (5)
+#define MEASURED_RPM_TOLERANCE (10)
 
 // MOTOR SPEED MEASUREMENT CONFIGURATIONS
 // ==============================================================

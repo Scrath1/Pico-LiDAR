@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import queue
 import numpy as np
 import math
+import threading
 
 parser = argparse.ArgumentParser(
     prog='pico-lidar companion program'
@@ -39,16 +40,24 @@ def _update_lidar_plot():
     vl53l0x_values = [v for v in vl53l0x_values if v[0]!=-1]
     # Next filter out all values with an unrealistic measurement
     vl53l0x_values = [v for v in vl53l0x_values if v[1] < VL53L0X_MAX_VALID_DISTANCE]
+    
+    fig = plt.figure(num=fig_id)
+    fig.clear()
+    lidar_plot = fig.add_subplot()
+    lidar_plot.grid()
+    lidar_plot.axhline(y=0, color='r', linestyle='-')
+    lidar_plot.axvline(x=0, color='r', linestyle='-')
     while len(vl53l0x_values) > MAX_DATA_POINTS:
         vl53l0x_values.pop(0)
     if len(vl53l0x_values) < 1:
-        return
-    # calculate x and y coordinates for each [angle, distance] value
-    x_coords = [d * np.cos(math.radians(a)) for [a,d] in vl53l0x_values]
-    y_coords = [d * np.sin(math.radians(a)) for [a,d] in vl53l0x_values]
-    
-    plt.figure(num=fig_id).clear()
-    plt.scatter(x_coords, y_coords)
+        lidar_plot.text(0, 1, "No data")
+    else:
+        # calculate x and y coordinates for each [angle, distance] value
+        x_coords = [d * np.cos(math.radians(a)) for [a,d] in vl53l0x_values]
+        y_coords = [d * np.sin(math.radians(a)) for [a,d] in vl53l0x_values]
+        lidar_plot.set_xlabel("X Position (mm)")
+        lidar_plot.set_ylabel("Y Position (mm)")
+        lidar_plot.scatter(x_coords, y_coords)
     plt.show(block=False)
     plt.pause(0.001) # needed to update the gui
 
@@ -80,18 +89,21 @@ def main():
         exit()
 
     _send_args(args)
+    gui_thread = threading.Thread(target=run_gui)
     if(args.pid_gui):
-        run_gui()
+        gui_thread.start()
     else:
         si.start_motor()
-        global vl53l0x_queue
-        vl53l0x_queue = si.subscribe("VL53L0X")
-        _create_lidar_plot()
-        
-        while plt.fignum_exists(fig_id):
-            _update_lidar_plot()
-            time.sleep(0.1)
 
+    global vl53l0x_queue
+    vl53l0x_queue = si.subscribe("VL53L0X")
+    _create_lidar_plot()
+
+    while plt.fignum_exists(fig_id):
+        _update_lidar_plot()
+        time.sleep(0.1)
+    
+    gui_thread.join()
     # Before exiting, stop motor
     si.stop_motor()
     # sleep is necessary so stop message can be sent before program exits

@@ -116,7 +116,7 @@ def _update_plots():
     pwm_values = [v[1] for v in pwm]
     
     # define plot limits for the rpm and pwm plots
-    limits = [{min(measured_rpm_values + target_rpm_values), max(measured_rpm_values + target_rpm_values) * 2},{0, 100}]
+    limits = [{0, max(measured_rpm_values + target_rpm_values) * 2},{0, 100}]
     
     if len(measured_rpm) > 0 and len(target_rpm) > 0:
         rpm_plot = fig.add_subplot()
