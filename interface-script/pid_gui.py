@@ -13,9 +13,11 @@ measured_rpm_queue = queue.Queue()
 measured_rpm = list()
 target_rpm_queue = queue.Queue()
 target_rpm = list()
+pwm_queue = queue.Queue()
+pwm = list()
 
 canvas: FigureCanvasTkAgg
-fig = Figure(figsize=(5,5), dpi=100)
+fig = Figure(figsize=(6,5), dpi=100)
 
 motor_spinboxes: dict
 
@@ -103,20 +105,42 @@ def _update_plots():
     # get data
     _get_queued_values(measured_rpm_queue, measured_rpm)
     _get_queued_values(target_rpm_queue, target_rpm)
+    _get_queued_values(pwm_queue, pwm)
     
     fig.clear()
-    rpm_plot = fig.add_subplot()
     measured_rpm_timestamps = [v[0] for v in measured_rpm]
     measured_rpm_values = [v[1] for v in measured_rpm]
     target_rpm_timestamps = [v[0] for v in target_rpm]
     target_rpm_values = [v[1] for v in target_rpm]
-    if len(measured_rpm) > 0:
-        rpm_plot.plot(measured_rpm_timestamps, measured_rpm_values, label="measured RPM")
-        rpm_plot.plot(target_rpm_timestamps, target_rpm_values, label="target RPM")
+    pwm_timestamps = [v[0] for v in pwm]
+    pwm_values = [v[1] for v in pwm]
+    
+    # define plot limits for the rpm and pwm plots
+    limits = [{min(measured_rpm_values + target_rpm_values), max(measured_rpm_values + target_rpm_values) * 2},{0, 100}]
+    
+    if len(measured_rpm) > 0 and len(target_rpm) > 0:
+        rpm_plot = fig.add_subplot()
+        color_mRPM = "C0"
+        color_tRPM = "C1"
+        rpm_plot.set_ylim(limits[0])
+        rpm_plot.set_ylim(limits[0])
+        rpm_plot.plot(measured_rpm_timestamps, measured_rpm_values, label="measured RPM", color=color_mRPM)
+        rpm_plot.plot(target_rpm_timestamps, target_rpm_values, label="target RPM", color=color_tRPM)
         rpm_plot.set_xlabel("Timestamp (ms)")
         rpm_plot.set_ylabel("RPM")
         rpm_plot.legend()
         rpm_plot.grid()
+
+    if len(pwm) > 0:
+        pwm_plot = fig.add_subplot(frame_on=False)
+        pwm_plot.set_ylim(limits[1])
+        color_pwm = "C2"
+        pwm_plot.plot(pwm_timestamps, pwm_values, label="PWM", color=color_pwm)
+        pwm_plot.set_ylabel("PWM Duty Cycle", color=color_pwm)
+        pwm_plot.tick_params(axis='y', colors=color_pwm)
+        pwm_plot.yaxis.set_label_position('right')
+        pwm_plot.yaxis.set_ticks_position('right')
+        pwm_plot.set_xticks([])
     canvas.draw()
     
 def are_almost_equal(a: float, b: float, tolerance=1e-9):
@@ -141,9 +165,10 @@ def run_gui():
         running = False
         window.destroy()
 
-    global measured_rpm_queue, target_rpm_queue
+    global measured_rpm_queue, target_rpm_queue, pwm_queue
     measured_rpm_queue = si.subscribe("measuredRPM", 200)
     target_rpm_queue = si.subscribe("targetRPM", 200)
+    pwm_queue = si.subscribe("PWM", 200);
     window = _create_gui()
     _check_spinbox_changes(dry_run=True)
     _embed_plots(window)
