@@ -27,7 +27,7 @@ typedef struct {
         // ideal time in us between each hall effect pulse
         const uint32_t pulseRotationTime_us = fullRotationTime_us / PULSES_PER_REV;
         const uint32_t timeSinceLastPulse_us = curTime_us - timeOfAngleIncrement_us;
-        uint16_t angleIncrement = (360 / PULSES_PER_REV) / (pulseRotationTime_us / timeSinceLastPulse_us);
+        uint16_t angleIncrement = (360 / PULSES_PER_REV) / ((float)pulseRotationTime_us / (float)timeSinceLastPulse_us);
         return (angleBase + angleIncrement) % 360;
     }
 } dome_angle_t;

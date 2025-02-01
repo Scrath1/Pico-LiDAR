@@ -72,7 +72,7 @@ void serialInterfaceTask(void* pvParameters) {
         if(currentTime_ms - timestampLastPlotDataTansmission_ms > SERIAL_INTERFACE_PLOT_OUTPUT_INTERVAL_MS) {
             serialPrintf(">%s:%lu\n", runtimeSettings.targetRPM.name, runtimeSettings.targetRPM.get());
             serialPrintf(">measuredRPM:%lu\n", status.measuredRPM.rpm);
-            serialPrintf(">PWM:%lu\n", status.pwmOutputLevel / (PWM_FULL_VALUE / 100));
+            serialPrintf(">PWM:%0.1f\n", (float)status.pwmOutputLevel / (PWM_FULL_VALUE / 100));
 
             // update timestamp of last transmission
             timestampLastPlotDataTansmission_ms = currentTime_ms;

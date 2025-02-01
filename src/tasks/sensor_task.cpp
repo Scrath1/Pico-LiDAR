@@ -107,9 +107,11 @@ void sensorTask(void* pvParameters) {
         // Actual range reading
         uint16_t range_mm = vl53l0x.readRangeSingleMillimeters();
         // get angle of measurement
-        int16_t currentAngle = -1;
+        int32_t currentAngle = -1;
         if(status.stableTargetRPM) {
-            currentAngle = status.domeAngle.calculateCurrentAngle(targetRPM.get());
+            uint16_t cangle = status.domeAngle.calculateCurrentAngle(targetRPM.get());
+            currentAngle = static_cast<int32_t>(cangle);
+            // serialPrintf(">Angle: %u\n", cangle);
         }
         if(vl53l0x.timeoutOccurred()) {
             ULOG_WARNING("%s: VL53L0X read timeout", TASK_LOG_NAME);

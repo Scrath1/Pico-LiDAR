@@ -58,11 +58,11 @@ void hallSensorISR(uint32_t events) {
             // Zero angle detected
             newAngleBase = 0;
         } else {
-            newAngleBase = (da.angleBase + (360 / PULSES_PER_REV));
+            newAngleBase = (da.angleBase + (360 / PULSES_PER_REV)) % 360;
         }
         dome_angle_t newAngPos = {.angleBase = newAngleBase, .timeOfAngleIncrement_us = currentTime_us};
         // write back
-        status.domeAngle = da;
+        status.domeAngle = newAngPos;
 
         // initialize variable before measuring
         if(lastPulseTime_us == 0) {
