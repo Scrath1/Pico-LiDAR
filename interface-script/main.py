@@ -1,6 +1,6 @@
 import sys
 import argparse
-from pid_gui import run_gui
+from pid_gui import run_gui, exit_gui
 import serial_interface as si
 import time
 import matplotlib.pyplot as plt
@@ -103,6 +103,7 @@ def main():
         _update_lidar_plot()
         time.sleep(0.1)
     
+    exit_gui()
     gui_thread.join()
     # Before exiting, stop motor
     si.stop_motor()

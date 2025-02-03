@@ -15,6 +15,7 @@ target_rpm_queue = queue.Queue()
 target_rpm = list()
 pwm_queue = queue.Queue()
 pwm = list()
+running: bool = True
 
 canvas: FigureCanvasTkAgg
 fig = Figure(figsize=(6,5), dpi=100)
@@ -159,16 +160,16 @@ def _check_spinbox_changes(dry_run: bool = False):
                 setter_func(val)
 
 def run_gui():
-    running: bool = True
+    global running
     def on_closing():
-        nonlocal running
+        global running
         running = False
         window.destroy()
 
     global measured_rpm_queue, target_rpm_queue, pwm_queue
     measured_rpm_queue = si.subscribe("measuredRPM", 200)
     target_rpm_queue = si.subscribe("targetRPM", 200)
-    pwm_queue = si.subscribe("PWM", 200);
+    pwm_queue = si.subscribe("PWM", 200)
     window = _create_gui()
     _check_spinbox_changes(dry_run=True)
     _embed_plots(window)
@@ -178,3 +179,7 @@ def run_gui():
         _update_plots()
         window.update_idletasks()
         window.update()
+        
+def exit_gui():
+    global running
+    running = False
