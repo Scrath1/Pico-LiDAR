@@ -34,10 +34,7 @@ void consoleLogger(ulog_level_t severity, char* msg) {
 }
 
 void hallSensorISR(uint32_t events) {
-    if(events & GPIO_IRQ_EDGE_RISE) {
-        // signal detection visualization using LED
-        digitalWrite(PIN_LED_USER, LED_OFF);
-    } else if(events & GPIO_IRQ_EDGE_FALL) {
+    if(events & GPIO_IRQ_EDGE_FALL) {
         static uint32_t lastPulseTime_us = 0;
         static uint32_t pulseIntervals[PULSES_PER_REV] = {0};
         const uint32_t pulseIntervalsArrSize = sizeof(pulseIntervals) / sizeof(pulseIntervals[0]);
@@ -46,9 +43,6 @@ void hallSensorISR(uint32_t events) {
 
         // immediately acquire timestamp of pulse
         const uint32_t currentTime_us = time_us_32();
-
-        // signal detection using LED
-        digitalWrite(PIN_LED_USER, 0);
 
         // read
         dome_angle_t da = status.domeAngle;
@@ -113,7 +107,7 @@ void gpio_callback(uint gpio, uint32_t events) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     if(gpio == PIN_SPEED_HALL_SENSOR)
         hallSensorISR(events);
-    else if(gpio == PIN_PUSHBTN_LEFT)
+    else if(gpio == PIN_PUSHBTN)
         pushBtnLeftISR(xHigherPriorityTaskWoken);
 
     if(xHigherPriorityTaskWoken) {
@@ -122,9 +116,9 @@ void gpio_callback(uint gpio, uint32_t events) {
 }
 
 void configurePins() {
-    pinMode(PIN_PUSHBTN_LEFT, INPUT);
-    pinMode(PIN_LED_USER, OUTPUT);
-    digitalWrite(PIN_LED_USER, 1);
+    gpio_init(PIN_LED_USER);
+    gpio_set_dir(PIN_LED_USER, OUTPUT_12MA);
+    gpio_put(PIN_LED_USER, LED_OFF);
 
     gpio_init(PIN_SPEED_HALL_SENSOR);
     gpio_set_dir(PIN_SPEED_HALL_SENSOR, GPIO_IN);
@@ -133,11 +127,12 @@ void configurePins() {
 
     gpio_init(PIN_ZERO_HALL_SENSOR);
     gpio_set_dir(PIN_ZERO_HALL_SENSOR, GPIO_IN);
+    gpio_set_pulls(PIN_PUSHBTN, true, false);
 
-    gpio_init(PIN_PUSHBTN_LEFT);
-    gpio_set_dir(PIN_PUSHBTN_LEFT, GPIO_IN);
+    gpio_init(PIN_PUSHBTN);
+    gpio_set_dir(PIN_PUSHBTN, GPIO_IN);
     // only first gpio irq to be configured has to use gpio_set_irq_enabled_with_callback
-    gpio_set_irq_enabled(PIN_PUSHBTN_LEFT, GPIO_IRQ_EDGE_FALL, true);
+    gpio_set_irq_enabled(PIN_PUSHBTN, GPIO_IRQ_EDGE_FALL, true);
 
     gpio_set_function(PIN_MOTOR_PWM, GPIO_FUNC_PWM);
     uint8_t pwmSlice = pwm_gpio_to_slice_num(PIN_MOTOR_PWM);

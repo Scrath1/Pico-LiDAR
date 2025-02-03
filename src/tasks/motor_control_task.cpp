@@ -103,9 +103,11 @@ void motorControlTask(void* pvParameters) {
         uint32_t pidRPMTarget;
         if(enableMotor.get()) {  // if motor enable is on
             pwm = (uint16_t)spid_process(&pid, (float)targetRPM.get(), status.measuredRPM.rpm);
+            gpio_put(PIN_LED_USER, LED_ON);
         } else {
             spid_process(&pid, (float)0, status.measuredRPM.rpm);
             pwm = 0;
+            gpio_put(PIN_LED_USER, LED_OFF);
         }
         status.pwmOutputLevel = pwm;
         pwm_set_chan_level(pwmSliceNum, pwmChannelNum, pwm);
