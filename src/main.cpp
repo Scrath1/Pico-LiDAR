@@ -94,7 +94,7 @@ void hallSensorISR(uint32_t events) {
 
 void pushBtnLeftISR() {
     static uint32_t lastTriggerTime_ms = 0;
-    const uint32_t currentTime_ms = xTaskGetTickCountFromISR();
+    const uint32_t currentTime_ms = pdTICKS_TO_MS(xTaskGetTickCountFromISR());
     if(currentTime_ms - lastTriggerTime_ms > BTN_DEBOUNCE_MS) {
         // button isn't bouncing (anymore)
         runtimeSettings.enableMotor.set(!runtimeSettings.enableMotor.get());
