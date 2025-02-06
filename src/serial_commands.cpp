@@ -4,42 +4,9 @@
 #include "prj_config.h"
 #include "serial_print.h"
 #include "ulog.h"
+#include "hardware/watchdog.h"
 
 #define LOG_LOCATION_NAME ("SerCmds")
-
-bool parseCommand(const uint8_t* frame, uint8_t frameSize) {
-    if(frame == NULL) {
-        ULOG_DEBUG("%s: frame is NULL", LOG_LOCATION_NAME);
-        return false;
-    }
-
-    // print received frame
-    // SERIAL.print("\n");
-    // for(uint32_t i = 0; i < frameSize; i++){
-    //     SERIAL.printf("%.2X", frame[i]);
-    // }
-
-    // we should have n*4+2 bytes in the frame.
-    // 1 byte for the command, 4 byte per parameter and 1 byte
-    // for the final delimiter
-    if((frameSize % 4) != 2) {
-        ULOG_DEBUG("%s: Invalid command framesize: %u", LOG_LOCATION_NAME, frameSize);
-        return false;
-    }
-
-    cmd_instruction_t cmd = (cmd_instruction_t)(frame[0]);
-    switch(cmd) {
-        default:
-        case CMD_NONE:
-            ULOG_ERROR("%s: Command code is NONE", LOG_LOCATION_NAME);
-            return false;
-        case CMD_SET:
-            return cmd_set(frame, frameSize);
-        case CMD_GET:
-            return cmd_get(frame, frameSize);
-    }
-    return true;
-}
 
 /**
  * Converts 4 bytes to a 32bit word
@@ -51,30 +18,11 @@ uint32_t bytesToWord32(const uint8_t bytes[4]) {
            (static_cast<uint32_t>(bytes[2]) << 8) | (static_cast<uint32_t>(bytes[3]) << 0);
 }
 
-bool cmd_set(const uint8_t* frame, const uint32_t frameSize) {
-    if(frame == NULL) {
-        ULOG_DEBUG("%s: frame must not be NULL", LOG_LOCATION_NAME);
-        return false;
-    }
-    // the set command expects 2 parameters, so the expected frameSize is
-    // 1 + 2*4 + 1
-    if((frameSize != 10 || frameSize == 0)) {
-        ULOG_DEBUG("%s: Invalid framesize for cmd_set: %u", LOG_LOCATION_NAME, frameSize);
-        return false;
-    }
-
-    // sanity check that the function was called for the correct command
-    if(frame[0] != CMD_SET) {
-        ULOG_DEBUG("%s: cmd_set invalid cmd code: %u", LOG_LOCATION_NAME, frame[0]);
-        return false;
-    }
-
-    parameter_id_t tgtVar = (parameter_id_t)bytesToWord32(&(frame[1]));
-
-    uint32_t parameterValue = bytesToWord32(&(frame[5]));
-    switch(tgtVar) {
+bool cmd_set(parameter_id_t id, const uint8_t valueBytes[4]) {
+    uint32_t parameterValue = bytesToWord32(valueBytes);
+    switch(id) {
         default:
-            ULOG_ERROR("%s: Invalid parameter ID: %lu", LOG_LOCATION_NAME, tgtVar);
+            ULOG_ERROR("%s: Invalid parameter ID: %lu", LOG_LOCATION_NAME, id);
             return false;
         case ID_NONE:
             ULOG_ERROR("%s: Variable ID NONE received", LOG_LOCATION_NAME);
@@ -131,33 +79,50 @@ bool cmd_set(const uint8_t* frame, const uint32_t frameSize) {
                 runtimeSettings.enableMotor.set(en);
             }
         } break;
+        case ID_VL53L0X_TIME_BUDGET: {
+            uint32_t budget = parameterValue;
+            if(budget != runtimeSettings.vl53l0xMeasurementTimingBudget_us.get()){
+                ULOG_INFO("%s: %s changed: %lu -> %lu", LOG_LOCATION_NAME, runtimeSettings.vl53l0xMeasurementTimingBudget_us.name,
+                    runtimeSettings.vl53l0xMeasurementTimingBudget_us.get(), budget);
+                runtimeSettings.vl53l0xMeasurementTimingBudget_us.set(budget);
+            }
+        } break;
+        case ID_DATAPOINTS_PER_REV: {
+            uint32_t dppr = parameterValue;
+            if(dppr != runtimeSettings.dataPointsPerRev.get() && dppr > 0){
+                ULOG_INFO("%s: %s changed: %lu -> %lu", LOG_LOCATION_NAME, runtimeSettings.dataPointsPerRev.name,
+                    runtimeSettings.dataPointsPerRev.get(), dppr);
+                runtimeSettings.dataPointsPerRev.set(dppr);
+            }
+        } break;
+        case ID_ANGLE_OFFSET: {
+            int32_t offset = (*(reinterpret_cast<int32_t*>(&parameterValue))) % 360;
+            if(offset != runtimeSettings.angleOffset.get()) {
+                ULOG_INFO("%s: %s changed: %i -> %i", LOG_LOCATION_NAME, runtimeSettings.angleOffset.name,
+                          runtimeSettings.angleOffset.get(), offset);
+                runtimeSettings.angleOffset.set((uint16_t)offset);
+            }
+        } break;
+        case ID_SERIAL_ERROR_COUNTER:
+            ULOG_ERROR("%s: serial error counter is read-only", LOG_LOCATION_NAME);
+            break;
+        case ID_RESET:
+            if(parameterValue == 1){
+                ULOG_INFO("%s: Resetting MCU", LOG_LOCATION_NAME);
+                watchdog_enable(10, true);
+            }
+            else{
+                ULOG_ERROR("%s: Parameter for reset command must be 1", LOG_LOCATION_NAME);
+            }
+            break;
     }
     return true;
 }
 
-bool cmd_get(const uint8_t* frame, const uint32_t frameSize) {
-    if(frame == NULL) {
-        ULOG_DEBUG("%s: frame must not be NULL", LOG_LOCATION_NAME);
-        return false;
-    }
-    // The get command expects a frame length of 6
-    // 1 + 4 + 1
-    if((frameSize != 6 || frameSize == 0)) {
-        ULOG_DEBUG("%s: Invalid framesize for cmd_get: %u", LOG_LOCATION_NAME, frameSize);
-        return false;
-    }
-
-    // sanity check that the function was called for the correct command
-    if(frame[0] != CMD_GET) {
-        ULOG_DEBUG("%s: cmd_get invalid cmd code: %u", LOG_LOCATION_NAME, frame[0]);
-        return false;
-    }
-
-    parameter_id_t tgtVar = (parameter_id_t)bytesToWord32(&(frame[1]));
-
-    switch(tgtVar) {
+bool cmd_get(parameter_id_t id) {
+    switch(id) {
         default:
-            ULOG_ERROR("%s: Invalid parameter ID: %lu", LOG_LOCATION_NAME, tgtVar);
+            ULOG_ERROR("%s: Invalid parameter ID: %lu", LOG_LOCATION_NAME, id);
             return false;
         case ID_NONE:
             ULOG_ERROR("%s: Variable ID NONE received", LOG_LOCATION_NAME);
@@ -177,6 +142,59 @@ bool cmd_get(const uint8_t* frame, const uint32_t frameSize) {
         case ID_ENABLE_MOTOR:
             serialPrintf(">%s:%u\n", runtimeSettings.enableMotor.name, runtimeSettings.enableMotor.get());
             break;
+        case ID_VL53L0X_TIME_BUDGET:
+            serialPrintf(">%s:%lu\n", runtimeSettings.vl53l0xMeasurementTimingBudget_us.name, runtimeSettings.vl53l0xMeasurementTimingBudget_us.get());
+            break;
+        case ID_DATAPOINTS_PER_REV:
+            serialPrintf(">%s:%i\n", runtimeSettings.angleOffset.name, runtimeSettings.angleOffset.get());
+            break;
+        case ID_ANGLE_OFFSET:
+            serialPrintf(">%s:%i\n", runtimeSettings.angleOffset.name, runtimeSettings.angleOffset.get());
+            break;
+        case ID_SERIAL_ERROR_COUNTER:
+            serialPrintf(">serialErrorCounter:%lu\n", status.serialCmdErrors);
+            break;
+        case ID_RESET:
+            ULOG_ERROR("Reset is write only");
+            break;
     }
     return true;
+}
+
+bool parseCommand(cmd_instruction_t cmd, const uint8_t targetIdBytes[4], const uint8_t valueBytes[4]) {
+    if(targetIdBytes == NULL) {
+        ULOG_DEBUG("%s: targetIdBytes is NULL", LOG_LOCATION_NAME);
+        status.serialCmdErrors++;
+        return false;
+    }
+    if(valueBytes == NULL){
+        ULOG_DEBUG("%s: valueBytes is NULL", LOG_LOCATION_NAME);
+        status.serialCmdErrors++;
+        return false;
+    }
+
+    // print received frame
+    // serialPrint("\n");
+    // for(uint32_t i = 0; i < frameSize; i++){
+    //     serialPrintf("%.2X", frame[i]);
+    // }
+
+    parameter_id_t id = static_cast<parameter_id_t>(bytesToWord32(targetIdBytes));
+    // ULOG_TRACE("%s: Parsed ID:%u from bytes %x%x%x%x", LOG_LOCATION_NAME, id,targetIdBytes[0], targetIdBytes[1], targetIdBytes[2], targetIdBytes[3]);
+    bool ret = false;
+    switch(cmd) {
+        default:
+        case CMD_NONE:
+            ULOG_ERROR("%s: Command code is NONE or unknown: %u", LOG_LOCATION_NAME, (uint8_t)cmd);
+            ret = false;
+            break;
+        case CMD_SET:
+            ret = cmd_set(id, valueBytes);
+            break;
+        case CMD_GET:
+            ret = cmd_get(id);
+            break;
+    }
+    if(!ret) status.serialCmdErrors++;
+    return ret;
 }

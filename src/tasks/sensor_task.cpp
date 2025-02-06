@@ -18,6 +18,7 @@ TaskHandle_t sensorTaskHandle;
 static setting<uint32_t> targetRPM;
 static setting<uint32_t> vl53l0xTimingBudget_us;
 static setting<uint16_t> dataPointsPerRev;
+static setting<int16_t> angleOffset;
 
 uint32_t rpmToTimePerRev_ms(uint16_t rpm) { return (1000 / (rpm / 60)); }
 
@@ -93,6 +94,9 @@ void sensorTask(void* pvParameters) {
         if(dataPointsPerRev != runtimeSettings.dataPointsPerRev) {
             dataPointsPerRev = runtimeSettings.dataPointsPerRev;
         }
+        if(angleOffset != runtimeSettings.angleOffset){
+            angleOffset = runtimeSettings.angleOffset;
+        }
 
         // ToDo: Maybe outsource this step to another point
         uint16_t checkedMaxScanpoints = checkMaxScanpointsPerRev(targetRPM.get(), dataPointsPerRev.get(), vl53l0xTimingBudget_us.get() / 1000);
@@ -109,7 +113,7 @@ void sensorTask(void* pvParameters) {
         // get angle of measurement
         int32_t currentAngle = -1;
         if(status.stableTargetRPM) {
-            uint16_t cangle = status.domeAngle.calculateCurrentAngle(targetRPM.get());
+            uint16_t cangle = status.domeAngle.calculateCurrentAngle(targetRPM.get(), angleOffset.get());
             currentAngle = static_cast<int32_t>(cangle);
             // serialPrintf(">Angle: %u\n", cangle);
         }

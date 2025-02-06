@@ -17,15 +17,25 @@ class _ParameterId(Enum):
     KD = 3
     TARGET_RPM = 4
     ENABLE_MOTOR = 5
+    VL53L0X_TIME_BUDGET = 6
+    DATAPOINTS_PER_REV = 7
+    ANGLE_OFFSET = 8
+    SERIAL_ERROR_COUNTER = 9
+    RESET = 10
+    
+CMD_START_DELIM = 0b01010101
     
 parameter_keys: dict = {_ParameterId.NONE: 'None',
                         _ParameterId.KP: 'K_p',
                         _ParameterId.KI: 'K_i',
                         _ParameterId.KD: 'K_d',
                         _ParameterId.TARGET_RPM: 'targetRPM',
-                        _ParameterId.ENABLE_MOTOR: 'enableMotor'}
-
-CMD_DELIMITER = b'\n'
+                        _ParameterId.ENABLE_MOTOR: 'enableMotor',
+                        _ParameterId.VL53L0X_TIME_BUDGET: 'VL53L0X_budget',
+                        _ParameterId.DATAPOINTS_PER_REV: 'scanpoints',
+                        _ParameterId.ANGLE_OFFSET: 'angleOffset',
+                        _ParameterId.SERIAL_ERROR_COUNTER: 'serialErrorCounter',
+                        _ParameterId.RESET: 'Reset'}
 
 _serial_device: serial.Serial = serial.Serial(write_timeout = 0, timeout=1)
 _cmd_frame_queue = queue.Queue()
@@ -96,19 +106,22 @@ def _publish(key: str, value: float | list[float]) -> bool:
         q.put((get_timestamp_ms(), value))
     return True
 
-def _build_cmd_frame(cmd: _CmdInstruction, tgt: _ParameterId, value: float | int | None = None) -> bytearray:
+def _build_cmd_frame(cmd: _CmdInstruction, tgt: _ParameterId, value: float | int = 0) -> bytearray:
     bytes = bytearray()
+    bytes.append(CMD_START_DELIM)
     bytes.append(cmd.value)
     bytes.extend(int(tgt.value).to_bytes(4))
     if isinstance(value, int):
-        bytes.extend(value.to_bytes(4))
+        if value >= 0:
+            bytes.extend(value.to_bytes(4))
+        else:
+            bytes.extend(value.to_bytes(4, signed=True))
     elif isinstance(value, float):
         b = bytearray(struct.pack("!f", value))
         if len(b) == 4:
             bytes.extend(b)
         else:
             bytes.extend(int(0).to_bytes(4))
-    bytes.extend(CMD_DELIMITER)
     return bytes
 
 def _enqueueCmdFrame(b: bytearray):
@@ -205,24 +218,6 @@ def _request_and_wait(id: _ParameterId, timeout: float = 0.2) -> float:
             # If no result was found after the queue timed out once, return 0
             return 0
 
-def start_motor():
-    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, 1))
-
-def stop_motor():
-    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, 0))
-
-def get_motor_state() -> bool:
-    return bool(_request_and_wait(_ParameterId.ENABLE_MOTOR))
-
-def set_target_rpm(val: int | float):
-    intval: int = 0
-    if isinstance(val, int):
-        intval = val
-    else:
-        intval = int(val)
-    cmd_frame = _build_cmd_frame(_CmdInstruction.SET, _ParameterId.TARGET_RPM, intval)
-    _enqueueCmdFrame(cmd_frame)
-
 def get_target_rpm() -> int:
     return int(_request_and_wait(_ParameterId.TARGET_RPM))
 
@@ -243,3 +238,45 @@ def set_kd(val: float):
     
 def get_kd() -> float:
     return float(_request_and_wait(_ParameterId.KD))
+
+def set_target_rpm(val: int | float):
+    intval: int = 0
+    if isinstance(val, int):
+        intval = val
+    else:
+        intval = int(val)
+    cmd_frame = _build_cmd_frame(_CmdInstruction.SET, _ParameterId.TARGET_RPM, intval)
+    _enqueueCmdFrame(cmd_frame)
+
+def start_motor():
+    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, 1))
+
+def stop_motor():
+    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, 0))
+
+def get_motor_state() -> bool:
+    return bool(_request_and_wait(_ParameterId.ENABLE_MOTOR))
+
+def set_vl53l0x_budget(val_us: int):
+    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.VL53L0X_TIME_BUDGET, val_us))
+    
+def get_vl53l0x_budget() -> int:
+    return int(_request_and_wait(_ParameterId.VL53L0X_TIME_BUDGET))
+
+def set_datapoints_per_rev(val: int):
+    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.DATAPOINTS_PER_REV, val))
+    
+def get_datapoints_per_rev() -> int:
+    return int(_request_and_wait(_ParameterId.DATAPOINTS_PER_REV))
+
+def set_angle_offset(val: int):
+    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.ANGLE_OFFSET, val))
+    
+def get_angle_offset() -> int:
+    return int(_request_and_wait(_ParameterId.ANGLE_OFFSET))
+
+def get_serial_error_counter() -> int:
+    return int(_request_and_wait(_ParameterId.SERIAL_ERROR_COUNTER))
+
+def reset_mcu():
+    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.RESET, int(1)))

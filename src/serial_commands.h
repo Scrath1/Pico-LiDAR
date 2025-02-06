@@ -3,25 +3,38 @@
 
 #include <cstdint>
 
-#define CMD_END_DELIMITER ('\n')
-
 /**
  * Commands begin with a single instruction byte (see cmd_instruction_t)
- * followed by however many parameters this specific command needs
- * and finished using a delimiter byte containing the ASCII code for '\n'
- * Parameter bytes are ordered MSB to LSB
+ * followed by 4 bytes for the ID of the variable to set or get
+ * followed by another 4 bytes for the value to set. In case of a get command
+ * these last 4 bytes are all 0.
+ * Bytes are ordered MSB to LSB
  *
  * Table generated using https://ozh.github.io/ascii-tables/
- * +-------------+-------------+-------+-------------+-----------+
- * | Instruction | Parameter 1 |  ...  | Parameter n | Delimiter |
- * +-------------+-------------+-------+-------------+-----------+
- * | 8bit        | 32bit       | 32bit | 32bit       | 8bit (\n) |
- * +-------------+-------------+-------+-------------+-----------+
+ * +-------------+-------------+-------------+
+ * | Instruction | Variable ID | Value       |
+ * +-------------+-------------+-------------+
+ * | 8bit        | 32bit       | 32bit       |
+ * +-------------+-------------+-------------+
  */
+
+#define COMMAND_FRAME_SIZE (1 + 4 + 4 + 1)
 
 typedef enum { CMD_NONE = 0, CMD_SET = 1, CMD_GET = 2 } cmd_instruction_t;
 
-typedef enum { ID_NONE = 0, ID_KP = 1, ID_KI = 2, ID_KD = 3, ID_TARGET_RPM = 4, ID_ENABLE_MOTOR = 5 } parameter_id_t;
+typedef enum {
+    ID_NONE = 0, // placeholder
+    ID_KP = 1, // PID K_p parameter
+    ID_KI = 2, // PID K_i parameter
+    ID_KD = 3, // PID K_d parameter
+    ID_TARGET_RPM = 4, // target speed for sensor dome
+    ID_ENABLE_MOTOR = 5, // enable/disable motor
+    ID_VL53L0X_TIME_BUDGET = 6,
+    ID_DATAPOINTS_PER_REV = 7, // Number of datapoints per dome revolution
+    ID_ANGLE_OFFSET = 8, // Value by which to shift all calculated angles
+    ID_SERIAL_ERROR_COUNTER = 9, // Number of errors when receiving serial commands
+    ID_RESET = 10, // reset mcu command. 1 for reset, 0 does nothing
+} parameter_id_t;
 
 typedef struct {
     cmd_instruction_t instruction;
@@ -33,10 +46,6 @@ typedef struct {
  * and tries to parse it. Depending on the command found, the frame is
  * passed to the corresponding function
  */
-bool parseCommand(const uint8_t* frame, uint8_t frameSize);
-
-bool cmd_set(const uint8_t* frame, const uint32_t frameSize);
-
-bool cmd_get(const uint8_t* frame, const uint32_t frameSize);
+bool parseCommand(cmd_instruction_t cmd, const uint8_t targetIdBytes[4], const uint8_t valueBytes[4]);
 
 #endif  // SERIAL_COMMANDS_H
