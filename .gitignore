@@ -10,3 +10,4 @@ circuit-diagram/circuit-diagram-backups/
 *.map
 interface-script/.venv
 interface-script/__pycache__/
+args.txt

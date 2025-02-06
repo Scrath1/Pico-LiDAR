@@ -19,6 +19,14 @@ VL53L0X_MAX_VALID_DISTANCE = 3000
 fig_id = 0
 max_data_age_ms = 0
 
+def read_args_file(file: str) -> list[str]:
+    out = list()
+    with open(file, 'r') as file:
+        for line in file:
+            s = line.split()
+            out += s
+    return out
+
 def _get_queued_values(q: queue) -> list:
     out = list()
     while True:
@@ -85,6 +93,7 @@ def _send_args(args):
 
 def main():
     parser.add_argument('-r', '--reset', action='store_true', help="Sends a reset command before anything else happens")
+    parser.add_argument('-f', '--file', action='store', type=str, help="Reads arguments from file instead of the CLI")
     serialArgs = parser.add_argument_group("Serial", "Configuration of the serial interface")
     serialArgs.add_argument('-p', '--port', action='store', type=str, help="Serial port", required=True)
     serialArgs.add_argument('-b', '--baud', action='store', type=int, default=115200, help="Baudrate")
@@ -100,7 +109,15 @@ def main():
     plotArgs = parser.add_argument_group("Plotting")
     plotArgs.add_argument('-a', '--age', action='store', type=int, default=1000, help="Maximum age in ms of points in lidar plot. Set to 0 to keep all measurements")
 
-    args = parser.parse_args(sys.argv[1:])
+    # Iterate over args to check if a file argument was passed
+    args = None
+    for idx, x in enumerate(sys.argv):
+        if x=='-f' or x=='--file' and idx+1 < len(sys.argv):
+            args = parser.parse_args(read_args_file(sys.argv[idx+1]))
+    # If no file argument was found and parsed, read the CLI arguments instead
+    if args == None:
+        args = parser.parse_args(sys.argv[1:])
+    
     global max_data_age_ms
     max_data_age_ms = args.age
 
