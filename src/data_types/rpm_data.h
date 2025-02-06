@@ -11,15 +11,15 @@ typedef struct {
 
     void set(uint32_t rpm) {
         this->rpm = rpm;
-        timestampLastChanged_ms = xTaskGetTickCount();
+        timestampLastChanged_ms = pdTICKS_TO_MS(xTaskGetTickCount());
     }
 
     void setFromISR(uint32_t rpm) {
         this->rpm = rpm;
-        timestampLastChanged_ms = xTaskGetTickCountFromISR();
+        timestampLastChanged_ms = pdTICKS_TO_MS(xTaskGetTickCountFromISR());
     }
 
-    uint32_t getAge_ms() { return xTaskGetTickCount() - timestampLastChanged_ms; }
+    uint32_t getAge_ms() { return pdTICKS_TO_MS(xTaskGetTickCount()) - timestampLastChanged_ms; }
 } rpm_data_t;
 
 #endif  // RPM_DATA_H

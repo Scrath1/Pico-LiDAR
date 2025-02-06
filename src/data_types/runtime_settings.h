@@ -17,6 +17,8 @@ typedef struct {
     setting<uint32_t> vl53l0xMeasurementTimingBudget_us;
     // Number of measurement points per full revolution of the dome
     setting<uint16_t> dataPointsPerRev;
+    // Fixed angle in degree by which to shift any calculated dome angle
+    setting<int16_t> angleOffset;
 } runtime_settings_t;
 
 #endif  // RUNTIME_SETTINGS_H

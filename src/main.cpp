@@ -3,7 +3,6 @@
 #include <hardware/gpio.h>
 #include <hardware/pwm.h>
 #include <pico/stdlib.h>
-#include <queue.h>
 #include <task.h>
 #include <ulog.h>
 
@@ -95,7 +94,7 @@ void hallSensorISR(uint32_t events) {
 
 void pushBtnLeftISR() {
     static uint32_t lastTriggerTime_ms = 0;
-    const uint32_t currentTime_ms = xTaskGetTickCountFromISR();
+    const uint32_t currentTime_ms = pdTICKS_TO_MS(xTaskGetTickCountFromISR());
     if(currentTime_ms - lastTriggerTime_ms > BTN_DEBOUNCE_MS) {
         // button isn't bouncing (anymore)
         runtimeSettings.enableMotor.set(!runtimeSettings.enableMotor.get());
@@ -121,7 +120,8 @@ void gpio_callback(uint gpio, uint32_t events) {
 
 void configurePins() {
     gpio_init(PIN_LED_USER);
-    gpio_set_dir(PIN_LED_USER, OUTPUT_12MA);
+    gpio_set_dir(PIN_LED_USER, GPIO_OUT);
+    gpio_set_drive_strength(PIN_LED_USER, GPIO_DRIVE_STRENGTH_12MA);
     gpio_put(PIN_LED_USER, LED_OFF);
 
     gpio_init(PIN_SPEED_HALL_SENSOR);

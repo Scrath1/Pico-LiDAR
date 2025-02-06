@@ -68,7 +68,7 @@
 #define SERIAL_CMD_INPUT_BUFFER_SIZE (64)
 // Time after which received serial data for commands is discarded if no
 // new data was received and the command is incomplete.
-#define SERIAL_CMD_INPUT_TIMEOUT_MS (500)
+#define SERIAL_CMD_INPUT_TIMEOUT_MS (105)
 // Maximum length of a debug message
 #define DBG_MESSAGE_MAX_LEN (256)
 #define TX_BUFFER_LEN (10 * DBG_MESSAGE_MAX_LEN)
@@ -88,6 +88,7 @@
 // required for getting the sensor readings. Increase if you get
 // warnings about timing violations
 #define SENSOR_SCAN_EXTRA_TIME_BUDGET_MS (12)
+#define DEFAULT_ANGLE_OFFSET (0)
 
 // SIGNAL AGE
 // ==============================================================

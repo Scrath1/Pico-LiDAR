@@ -20,12 +20,12 @@ struct setting {
 
     void set(T val) {
         this->value = val;
-        this->lastChanged_ms = xTaskGetTickCount();
+        this->lastChanged_ms = pdTICKS_TO_MS(xTaskGetTickCount());
     }
 
     void setFromISR(T val) {
         this->value = val;
-        this->lastChanged_ms = xTaskGetTickCountFromISR();
+        this->lastChanged_ms = pdTICKS_TO_MS(xTaskGetTickCountFromISR());
     }
 
     T get() { return this->value; }

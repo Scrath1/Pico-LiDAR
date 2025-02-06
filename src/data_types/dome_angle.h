@@ -20,7 +20,7 @@ typedef struct {
      * @param domeRPM [IN] Rotation speed of dome
      * @return expected current angle of dome in degrees
      */
-    inline uint16_t calculateCurrentAngle(uint32_t domeRPM) {
+    inline uint16_t calculateCurrentAngle(uint32_t domeRPM, int16_t angleOffset) {
         const uint32_t curTime_us = time_us_32();
         // calculate time in us for a full rotation
         const uint32_t fullRotationTime_us = 1e6 / (domeRPM / 60);
@@ -28,7 +28,8 @@ typedef struct {
         const uint32_t pulseRotationTime_us = fullRotationTime_us / PULSES_PER_REV;
         const uint32_t timeSinceLastPulse_us = curTime_us - timeOfAngleIncrement_us;
         uint16_t angleIncrement = (360 / PULSES_PER_REV) / ((float)pulseRotationTime_us / (float)timeSinceLastPulse_us);
-        return (angleBase + angleIncrement) % 360;
+        int16_t offset = angleOffset % 360;
+        return (angleBase + angleIncrement + offset + 360) % 360;
     }
 } dome_angle_t;
 

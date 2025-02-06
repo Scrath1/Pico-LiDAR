@@ -9,7 +9,8 @@ runtime_settings_t runtimeSettings = {
     .targetRPM = {MOTOR_TARGET_SPEED, "targetRPM"},
     .enableMotor = {0, "enableMotor"},
     .vl53l0xMeasurementTimingBudget_us = {VL53L0X_TIME_BUDGET_MS * 1000, "VL53L0X_Measurement_Budget"},
-    .dataPointsPerRev = {DEFAULT_SCANPOINTS_PER_REV, "scanpoints"}};
+    .dataPointsPerRev = {DEFAULT_SCANPOINTS_PER_REV, "scanpoints"},
+    .angleOffset = {DEFAULT_ANGLE_OFFSET, "angleOffset"}};
 
 // will be handled at runtime. Only do a zero initialization
 status_t status = {.measuredRPM = {.rpm = 0, .timestampLastChanged_ms = 0},
@@ -17,4 +18,5 @@ status_t status = {.measuredRPM = {.rpm = 0, .timestampLastChanged_ms = 0},
                    .stableTargetRPMCount = 0,
                    .sensorTaskInterval_ms = 0,
                    .domeAngle = {.angleBase = 0, .timeOfAngleIncrement_us = 0},
-                   .pwmOutputLevel = 0};
+                   .pwmOutputLevel = 0,
+                   .serialCmdErrors = 0};
