@@ -108,6 +108,10 @@ void gpio_callback(uint gpio, uint32_t events) {
         hallSensorISR(events);
     else if(gpio == PIN_PUSHBTN)
         pushBtnLeftISR();
+    else if(gpio == PIN_ECHO){
+        if(events & GPIO_IRQ_EDGE_FALL) hc_sr04_isr(xHigherPriorityTaskWoken, false);
+        else hc_sr04_isr(xHigherPriorityTaskWoken, true);
+    }
 
     if(xHigherPriorityTaskWoken) {
         portYIELD_FROM_ISR(pdTRUE);
@@ -133,6 +137,13 @@ void configurePins() {
     gpio_set_dir(PIN_PUSHBTN, GPIO_IN);
     // only first gpio irq to be configured has to use gpio_set_irq_enabled_with_callback
     gpio_set_irq_enabled(PIN_PUSHBTN, GPIO_IRQ_EDGE_FALL, true);
+
+    gpio_init(PIN_TRIG);
+    gpio_set_dir(PIN_TRIG, GPIO_OUT);
+
+    gpio_init(PIN_ECHO);
+    gpio_set_dir(PIN_ECHO, GPIO_IN);
+    gpio_set_irq_enabled(PIN_ECHO, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true);
 
     gpio_set_function(PIN_MOTOR_PWM, GPIO_FUNC_PWM);
     uint8_t pwmSlice = pwm_gpio_to_slice_num(PIN_MOTOR_PWM);

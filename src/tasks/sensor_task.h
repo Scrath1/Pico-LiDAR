@@ -14,6 +14,7 @@
 #endif
 
 extern TaskHandle_t sensorTaskHandle;
+void hc_sr04_isr(BaseType_t& xHigherPriorityTaskWoken, bool risingEdge);
 void sensorTask(void* pvParameters);
 
 #endif  // SENSOR_TASK_H
