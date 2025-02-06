@@ -80,6 +80,9 @@
 #define DEFAULT_SCANPOINTS_PER_REV (16)
 // Maximum time in ms for the VL53L0X to measure a distance
 #define VL53L0X_TIME_BUDGET_MS (20)
+// How often the MCU tries to connect to the VL53L0X before ignoring it
+// and only using the HC-SR04
+#define VL53L0X_MAX_CONNECTION_ATTEMPTS (5)
 // Maximum time to wait for the result of the HC-SR04 sensor.
 // This time is in addition to the time budget of the VL53L0X sensor
 // as the HC-SR04 is triggered first and read later

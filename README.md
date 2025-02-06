@@ -1,7 +1,7 @@
 # Pico-LiDAR
 The goal of this project is to build a simple LiDAR sensor using hobbyist components
 such as the Raspberry Pi Pico microcontroller, VL53L0X Time-of-Flight laser sensor
-and the the HC-SR04 ultrasonic sensor.
+and the the HC-SR04P ultrasonic sensor.
 
 ## Bill of Materials (BOM)
 <details>
@@ -41,9 +41,9 @@ and the the HC-SR04 ultrasonic sensor.
   Note: The A3144 is a 5V sensor but in my experience will also work
   when powered using 3.3V.
 - VL53L0X Time-of-Flight sensor module
-- HC-SR04 Ultrasonic Sensor module
+- HC-SR04P Ultrasonic Sensor module (The P version can be powered from 3.3V)
 - 6pin 2.54mm female socket connector for VL53L0X sensor
-- 4pin 2.54mm female socket connector for HC-SR04 sensor
+- 4pin 2.54mm female socket connector for HC-SR04P sensor
 - 1 push button for manually starting the motor
 - 1 push button for resetting the MCU (optional)
 - 1 LED for indicating motor state and the corresponding current limiting resistor
