@@ -9,6 +9,7 @@ class _CmdInstruction(Enum):
     NONE = 0
     SET = 1
     GET = 2
+    RESET = 3
     
 class _ParameterId(Enum):
     NONE = 0,
@@ -21,10 +22,9 @@ class _ParameterId(Enum):
     DATAPOINTS_PER_REV = 7
     ANGLE_OFFSET = 8
     SERIAL_ERROR_COUNTER = 9
-    RESET = 10
-    
+
 CMD_START_DELIM = 0b01010101
-    
+
 parameter_keys: dict = {_ParameterId.NONE: 'None',
                         _ParameterId.KP: 'K_p',
                         _ParameterId.KI: 'K_i',
@@ -34,8 +34,7 @@ parameter_keys: dict = {_ParameterId.NONE: 'None',
                         _ParameterId.VL53L0X_TIME_BUDGET: 'VL53L0X_budget',
                         _ParameterId.DATAPOINTS_PER_REV: 'scanpoints',
                         _ParameterId.ANGLE_OFFSET: 'angleOffset',
-                        _ParameterId.SERIAL_ERROR_COUNTER: 'serialErrorCounter',
-                        _ParameterId.RESET: 'Reset'}
+                        _ParameterId.SERIAL_ERROR_COUNTER: 'serialErrorCounter'}
 
 _serial_device: serial.Serial = serial.Serial(write_timeout = 0, timeout=1)
 _cmd_frame_queue = queue.Queue()
@@ -110,7 +109,12 @@ def _build_cmd_frame(cmd: _CmdInstruction, tgt: _ParameterId, value: float | int
     bytes = bytearray()
     bytes.append(CMD_START_DELIM)
     bytes.append(cmd.value)
-    bytes.extend(int(tgt.value).to_bytes(4))
+    if(tgt == _ParameterId.NONE):
+        # For some reason the NONE Parameter value is treated as a tuple and is therefore causing problems
+        # with the integer cast
+        bytes.extend(int(0).to_bytes(4))
+    else:
+        bytes.extend(int(tgt.value).to_bytes(4))
     if isinstance(value, int):
         if value >= 0:
             bytes.extend(value.to_bytes(4))
@@ -279,4 +283,4 @@ def get_serial_error_counter() -> int:
     return int(_request_and_wait(_ParameterId.SERIAL_ERROR_COUNTER))
 
 def reset_mcu():
-    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.RESET, int(1)))
+    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.RESET, _ParameterId.NONE, int(0)))

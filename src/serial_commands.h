@@ -20,7 +20,7 @@
 
 #define COMMAND_FRAME_SIZE (1 + 4 + 4 + 1)
 
-typedef enum { CMD_NONE = 0, CMD_SET = 1, CMD_GET = 2 } cmd_instruction_t;
+typedef enum { CMD_NONE = 0, CMD_SET = 1, CMD_GET = 2, CMD_RESET = 3} cmd_instruction_t;
 
 typedef enum {
     ID_NONE = 0, // placeholder
@@ -33,7 +33,6 @@ typedef enum {
     ID_DATAPOINTS_PER_REV = 7, // Number of datapoints per dome revolution
     ID_ANGLE_OFFSET = 8, // Value by which to shift all calculated angles
     ID_SERIAL_ERROR_COUNTER = 9, // Number of errors when receiving serial commands
-    ID_RESET = 10, // reset mcu command. 1 for reset, 0 does nothing
 } parameter_id_t;
 
 typedef struct {

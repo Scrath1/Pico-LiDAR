@@ -1,10 +1,10 @@
 #include "serial_commands.h"
 
 #include "global.h"
+#include "hardware/watchdog.h"
 #include "prj_config.h"
 #include "serial_print.h"
 #include "ulog.h"
-#include "hardware/watchdog.h"
 
 #define LOG_LOCATION_NAME ("SerCmds")
 
@@ -81,17 +81,18 @@ bool cmd_set(parameter_id_t id, const uint8_t valueBytes[4]) {
         } break;
         case ID_VL53L0X_TIME_BUDGET: {
             uint32_t budget = parameterValue;
-            if(budget != runtimeSettings.vl53l0xMeasurementTimingBudget_us.get()){
-                ULOG_INFO("%s: %s changed: %lu -> %lu", LOG_LOCATION_NAME, runtimeSettings.vl53l0xMeasurementTimingBudget_us.name,
-                    runtimeSettings.vl53l0xMeasurementTimingBudget_us.get(), budget);
+            if(budget != runtimeSettings.vl53l0xMeasurementTimingBudget_us.get()) {
+                ULOG_INFO("%s: %s changed: %lu -> %lu", LOG_LOCATION_NAME,
+                          runtimeSettings.vl53l0xMeasurementTimingBudget_us.name,
+                          runtimeSettings.vl53l0xMeasurementTimingBudget_us.get(), budget);
                 runtimeSettings.vl53l0xMeasurementTimingBudget_us.set(budget);
             }
         } break;
         case ID_DATAPOINTS_PER_REV: {
             uint32_t dppr = parameterValue;
-            if(dppr != runtimeSettings.dataPointsPerRev.get() && dppr > 0){
+            if(dppr != runtimeSettings.dataPointsPerRev.get() && dppr > 0) {
                 ULOG_INFO("%s: %s changed: %lu -> %lu", LOG_LOCATION_NAME, runtimeSettings.dataPointsPerRev.name,
-                    runtimeSettings.dataPointsPerRev.get(), dppr);
+                          runtimeSettings.dataPointsPerRev.get(), dppr);
                 runtimeSettings.dataPointsPerRev.set(dppr);
             }
         } break;
@@ -105,15 +106,6 @@ bool cmd_set(parameter_id_t id, const uint8_t valueBytes[4]) {
         } break;
         case ID_SERIAL_ERROR_COUNTER:
             ULOG_ERROR("%s: serial error counter is read-only", LOG_LOCATION_NAME);
-            break;
-        case ID_RESET:
-            if(parameterValue == 1){
-                ULOG_INFO("%s: Resetting MCU", LOG_LOCATION_NAME);
-                watchdog_enable(10, true);
-            }
-            else{
-                ULOG_ERROR("%s: Parameter for reset command must be 1", LOG_LOCATION_NAME);
-            }
             break;
     }
     return true;
@@ -143,7 +135,8 @@ bool cmd_get(parameter_id_t id) {
             serialPrintf(">%s:%u\n", runtimeSettings.enableMotor.name, runtimeSettings.enableMotor.get());
             break;
         case ID_VL53L0X_TIME_BUDGET:
-            serialPrintf(">%s:%lu\n", runtimeSettings.vl53l0xMeasurementTimingBudget_us.name, runtimeSettings.vl53l0xMeasurementTimingBudget_us.get());
+            serialPrintf(">%s:%lu\n", runtimeSettings.vl53l0xMeasurementTimingBudget_us.name,
+                         runtimeSettings.vl53l0xMeasurementTimingBudget_us.get());
             break;
         case ID_DATAPOINTS_PER_REV:
             serialPrintf(">%s:%i\n", runtimeSettings.angleOffset.name, runtimeSettings.angleOffset.get());
@@ -154,10 +147,14 @@ bool cmd_get(parameter_id_t id) {
         case ID_SERIAL_ERROR_COUNTER:
             serialPrintf(">serialErrorCounter:%lu\n", status.serialCmdErrors);
             break;
-        case ID_RESET:
-            ULOG_ERROR("Reset is write only");
-            break;
     }
+    return true;
+}
+
+bool cmd_reset() {
+    ULOG_INFO("%s: Resetting MCU", LOG_LOCATION_NAME);
+    watchdog_enable(8, true);
+    vTaskDelay(pdMS_TO_TICKS(8));
     return true;
 }
 
@@ -167,7 +164,7 @@ bool parseCommand(cmd_instruction_t cmd, const uint8_t targetIdBytes[4], const u
         status.serialCmdErrors++;
         return false;
     }
-    if(valueBytes == NULL){
+    if(valueBytes == NULL) {
         ULOG_DEBUG("%s: valueBytes is NULL", LOG_LOCATION_NAME);
         status.serialCmdErrors++;
         return false;
@@ -180,7 +177,8 @@ bool parseCommand(cmd_instruction_t cmd, const uint8_t targetIdBytes[4], const u
     // }
 
     parameter_id_t id = static_cast<parameter_id_t>(bytesToWord32(targetIdBytes));
-    // ULOG_TRACE("%s: Parsed ID:%u from bytes %x%x%x%x", LOG_LOCATION_NAME, id,targetIdBytes[0], targetIdBytes[1], targetIdBytes[2], targetIdBytes[3]);
+    // ULOG_TRACE("%s: Parsed ID:%u from bytes %x%x%x%x", LOG_LOCATION_NAME, id,targetIdBytes[0], targetIdBytes[1],
+    // targetIdBytes[2], targetIdBytes[3]);
     bool ret = false;
     switch(cmd) {
         default:
@@ -193,6 +191,9 @@ bool parseCommand(cmd_instruction_t cmd, const uint8_t targetIdBytes[4], const u
             break;
         case CMD_GET:
             ret = cmd_get(id);
+            break;
+        case CMD_RESET:
+            ret = cmd_reset();
             break;
     }
     if(!ret) status.serialCmdErrors++;
