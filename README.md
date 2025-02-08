@@ -67,6 +67,12 @@ yourself or drill fitting holes in the existing part.
 
 3D files for editing will be provided.
 
+## Setup
+### Installing dependencies
+
+## Usage
+### args file
+
 ## Attributions for CAD models
 Unfortunately I did not keep track of the origin of 3D CAD models used
 while building this project. If you think your model is being used and don't
