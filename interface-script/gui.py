@@ -260,8 +260,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         self.ui.plot_lidar.draw()
 
+app = None
 def run_gui():
+    global app
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
-    sys.exit(app.exec())
+    return app.exec()
+
+def close_gui():
+    global app
+    if app != None:
+        app.exit()

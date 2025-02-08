@@ -2,25 +2,20 @@ import sys
 import argparse
 import serial_interface as si
 import time
-import matplotlib.pyplot as plt
-import queue
-import numpy as np
-import math
-import threading
-from gui import run_gui
+import signal
+from gui import run_gui, close_gui
+
+running: bool = True
 
 parser = argparse.ArgumentParser(
     prog='pico-lidar companion program'
 )
 
-vl53l0x_queue = queue.Queue()
-vl53l0x_values = list()
-VL53L0X_MAX_VALID_DISTANCE_MM = 500
-hc_sr04_queue = queue.Queue()
-hc_sr04_values = list()
-HC_SR04_MAX_VALID_DISTANCE_MM = 4000
-fig_id = 0
-max_data_age_ms = 0
+def sigint_handler(sig, frame):
+    global running
+    print("Exiting program")
+    running = False
+    close_gui()
 
 def read_args_file(file: str) -> list[str]:
     out = list()
@@ -64,6 +59,9 @@ def main():
     plotArgs = parser.add_argument_group("Plotting")
     plotArgs.add_argument('-a', '--age', action='store', type=int, default=1000, help="Maximum age in ms of points in lidar plot. Set to 0 to keep all measurements")
 
+    # Setup signal handler for Ctrl+C
+    signal.signal(signal.SIGINT, sigint_handler)
+
     # Iterate over args to check if a file argument was passed
     args = None
     for idx, x in enumerate(sys.argv):
@@ -87,18 +85,21 @@ def main():
 
     _send_args(args)
     
+    return_code = 0
     if(args.no_gui):
         si.start_motor()
-        while(True):
+        global running
+        while(running):
             # Loop forever until the process is cancelled
             continue
     else:
-        run_gui()
+        return_code = run_gui()
 
     # Before exiting, stop motor
     si.stop_motor()
     # sleep is necessary so stop message can be sent before program exits
     time.sleep(0.05)
+    sys.exit(return_code)
 
 if __name__=="__main__":
     main()
