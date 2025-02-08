@@ -34,7 +34,7 @@ SettingContainer = namedtuple('SettingContainer', ["value", "getter", "setter", 
 class MainWindow(QMainWindow, Ui_MainWindow):
     # UI elements
     _plot_update_timer = QTimer()
-    _plot_update_interval_ms = 250
+    _plot_update_interval_ms = 100
     
     # Setting value holders
     # Widget connections are initialized later
@@ -58,6 +58,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     _hc_sr04: list[LidarData] = list()
     _hc_sr04_queue = queue.Queue()
     
+    # lidar_plot_range
+    _lidar_plot_range: int = 0
+    _rpm_plot_range: int = 0
+    
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent=parent)
         self.ui = Ui_MainWindow()
@@ -76,6 +80,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.subscribe_data_sources()
         self._plot_update_timer.timeout.connect(self.plot_handler_update)
         self._plot_update_timer.start(self._plot_update_interval_ms)
+        self._lidar_plot_range = self.ui.slider_range_lidar_plot.value()
+        self.ui.display_lidar_plot_zoom.display(self._lidar_plot_range)
+        self._rpm_plot_range = self.ui.slider_range_rpm_plot.value()
+        self.ui.display_rpm_plot_zoom.display(self._rpm_plot_range)
         self.btn_handler_read_from_device()
     
     def connect_signals_slots(self):
@@ -91,6 +99,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.ui.spinBox_tgt_rpm.valueChanged.connect(self.spinbox_handler_tgt_rpm)
         self.ui.spinBox_points_per_rev.valueChanged.connect(self.spinbox_handler_points_per_rev)
         self.ui.spinBox_vl53l0x_budget.valueChanged.connect(self.spinbox_handler_vl53l0x_budget)
+        self.ui.slider_range_rpm_plot.valueChanged.connect(self.slider_handler_rpm_plot_range)
+        self.ui.slider_range_lidar_plot.valueChanged.connect(self.slider_handler_lidar_plot_range)
     
     def subscribe_data_sources(self):
         self._measured_rpm_queue = si.subscribe("measuredRPM", 200)
@@ -124,9 +134,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._target_rpm.clear()
         self._pwm.clear()
         
+    def slider_handler_rpm_plot_range(self, value):
+        self._rpm_plot_range = value
+        
     def btn_handler_lidar_plot_reset(self):
         self._hc_sr04.clear()
         self._vl53l0x.clear()
+        
+    def slider_handler_lidar_plot_range(self, value):
+        self._lidar_plot_range = value
         
     def checkbox_handler_motor_on(self):
         if self.ui.checkBox_motor_on.checkState() == Qt.CheckState.Checked:
@@ -203,15 +219,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         measured_rpm_values = [v.value for v in self._measured_rpm]
         target_rpm_timestamps = [v.timestamp for v in self._target_rpm]
         target_rpm_values = [v.value for v in self._target_rpm]
-        # define plot limits for the rpm and pwm plots
-        limits = [{0, max(measured_rpm_values + target_rpm_values + [60]) * 2},{0, 100}]
+        # define plot y limits for the rpm and pwm plots
+        ylimits_rpm = [0, max(measured_rpm_values + target_rpm_values + [60]) * 2]
+        ylimits_pwm = [0, 100]
+        xlimits = [measured_rpm_timestamps[-1] + self._rpm_plot_range, measured_rpm_timestamps[-1]]
         
         if len(self._measured_rpm) > 0 and len(self._target_rpm) > 0:
             rpm_plot = fig.add_subplot()
             color_mRPM = "C0"
             color_tRPM = "C1"
-            rpm_plot.set_ylim(limits[0])
-            rpm_plot.set_ylim(limits[0])
+            rpm_plot.set_ylim(bottom=ylimits_rpm[0], top=ylimits_rpm[1])
+            if self._rpm_plot_range == 0:
+                # Enable autoscaling on x-axis
+                rpm_plot.autoscale(axis='x')
+            else:
+                # Set limit based on age
+                rpm_plot.set_xlim(left=xlimits[0],right=xlimits[1])
+            # ToDo: Set RPM Plot limits
             rpm_plot.plot(measured_rpm_timestamps, measured_rpm_values, label="measured RPM", color=color_mRPM)
             rpm_plot.plot(target_rpm_timestamps, target_rpm_values, label="target RPM", color=color_tRPM)
             rpm_plot.set_xlabel("Timestamp (ms)")
@@ -223,7 +247,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             pwm_timestamps = [v.timestamp for v in self._pwm]
             pwm_values = [v.value for v in self._pwm]
             pwm_plot = fig.add_subplot(frame_on=False)
-            pwm_plot.set_ylim(limits[1])
+            pwm_plot.set_ylim(bottom=ylimits_pwm[0], top=ylimits_pwm[1])
+            if self._rpm_plot_range == 0:
+                # Enable autoscaling on x-axis
+                pwm_plot.autoscale(axis='x')
+            else:
+                # Set limit based on age
+                pwm_plot.set_xlim(left=xlimits[0],right=xlimits[1])
             color_pwm = "C2"
             pwm_plot.plot(pwm_timestamps, pwm_values, label="PWM", color=color_pwm)
             pwm_plot.set_ylabel("PWM Duty Cycle", color=color_pwm)
@@ -231,6 +261,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             pwm_plot.yaxis.set_label_position('right')
             pwm_plot.yaxis.set_ticks_position('right')
             pwm_plot.set_xticks([])
+            
+        fig.tight_layout()
         self.ui.plot_rpm.draw()
         
     def draw_lidar_plot(self):
@@ -248,6 +280,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         lidar_plot.grid()
         lidar_plot.axhline(y=0, color='r', linestyle='-')
         lidar_plot.axvline(x=0, color='r', linestyle='-')
+        bottom = -self._lidar_plot_range
+        upper = self._lidar_plot_range
+        lidar_plot.set_ylim(bottom, upper)
+        lidar_plot.set_xlim(bottom, upper)
+        lidar_plot.set_aspect('equal')
         
         if len(vl53l0x_x) > 1 or len(hc_sr04_x) > 1:
             lidar_plot.set_xlabel("X Position (mm)")
@@ -255,8 +292,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             lidar_plot.scatter(vl53l0x_x, vl53l0x_y, color="r", label="VL53L0X")
             lidar_plot.scatter(hc_sr04_x, hc_sr04_y, color="b", label="HC-SR04")
             lidar_plot.legend()
-        else:
-            lidar_plot.text(0.5, 0.5, "No data")
         
         self.ui.plot_lidar.draw()
 

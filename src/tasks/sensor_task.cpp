@@ -86,6 +86,7 @@ void sensorTask(void* pvParameters) {
         if(vl53l0x.init()) {
             ULOG_INFO("%s: VL53L0X initialized", TASK_LOG_NAME);
             vl53l0xInitialized = true;
+            break;
         } else {
             ULOG_ERROR("%s: Attempt %lu failed to initialize VL53L0X sensor. Retrying in 1s", TASK_LOG_NAME, i + 1);
             vTaskDelay(pdMS_TO_TICKS(1000));
