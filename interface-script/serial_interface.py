@@ -269,6 +269,9 @@ def start_motor():
 def stop_motor():
     _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, 0))
 
+def set_motor_state(val: bool):
+    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, int(val)))
+
 def get_motor_state() -> bool:
     return bool(_request_and_wait(_ParameterId.ENABLE_MOTOR))
 
