@@ -1,6 +1,5 @@
 import sys
 import argparse
-from pid_gui import run_gui, exit_gui
 import serial_interface as si
 import time
 import matplotlib.pyplot as plt
@@ -8,6 +7,7 @@ import queue
 import numpy as np
 import math
 import threading
+from gui import run_gui
 
 parser = argparse.ArgumentParser(
     prog='pico-lidar companion program'
@@ -118,7 +118,7 @@ def main():
     settingArgs.add_argument('-o', '--offset-angle', action='store', type=int, help="Offsets the angle of all measurements")
     settingArgs.add_argument('-s', '--scanpoints', action='store', type=int, help="Number of datapoints to measure per rotation")
     settingArgs.add_argument('-tv', '--timebudget-vl53l0x', action='store', type=int, help="Time in us the VL53L0X has to get a measurement. This impacts accuracy")
-    settingArgs.add_argument('-g', "--pid-gui", action='store_true', default=False, help="Open GUI for tuning PID parameters")
+    settingArgs.add_argument('-ng', "--no-gui", action='store_true', default=False, help="Open GUI for tuning PID parameters")
     plotArgs = parser.add_argument_group("Plotting")
     plotArgs.add_argument('-a', '--age', action='store', type=int, default=1000, help="Maximum age in ms of points in lidar plot. Set to 0 to keep all measurements")
 
@@ -144,27 +144,25 @@ def main():
         time.sleep(0.1)
 
     _send_args(args)
-    gui_thread = threading.Thread(target=run_gui)
-    if(args.pid_gui):
-        gui_thread.start()
-    else:
-        si.start_motor()
-
-    global vl53l0x_queue, hc_sr04_queue
-    vl53l0x_queue = si.subscribe("VL53L0X")
-    hc_sr04_queue = si.subscribe("HC-SR04")
-    _create_lidar_plot()
-
-    while plt.fignum_exists(fig_id):
-        _update_lidar_plot()
-        time.sleep(0.1)
     
-    exit_gui()
-    gui_thread.join()
+    if(args.no_gui):
+        si.start_motor()
+    else:
+        run_gui()
+
+    # global vl53l0x_queue, hc_sr04_queue
+    # vl53l0x_queue = si.subscribe("VL53L0X")
+    # hc_sr04_queue = si.subscribe("HC-SR04")
+    # _create_lidar_plot()
+
+    # while plt.fignum_exists(fig_id):
+    #     _update_lidar_plot()
+    #     time.sleep(0.1)
+
     # Before exiting, stop motor
-    si.stop_motor()
+    # si.stop_motor()
     # sleep is necessary so stop message can be sent before program exits
-    time.sleep(0.05)
+    # time.sleep(0.05)
 
 if __name__=="__main__":
     main()
