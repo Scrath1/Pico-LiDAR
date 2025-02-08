@@ -86,6 +86,7 @@ void sensorTask(void* pvParameters) {
         if(vl53l0x.init()) {
             ULOG_INFO("%s: VL53L0X initialized", TASK_LOG_NAME);
             vl53l0xInitialized = true;
+            break;
         } else {
             ULOG_ERROR("%s: Attempt %lu failed to initialize VL53L0X sensor. Retrying in 1s", TASK_LOG_NAME, i + 1);
             vTaskDelay(pdMS_TO_TICKS(1000));
@@ -163,7 +164,7 @@ void sensorTask(void* pvParameters) {
         uint32_t hc_sr04_duration_us = 0;
         uint32_t hc_sr04_range_mm = 0;
         BaseType_t hc_sr04Success = xQueueReceive(hc_sr04_pulseDurationQueue, &hc_sr04_duration_us, pdMS_TO_TICKS(HC_SR04_TIME_BUDGET_MS));
-        if(pdPASS == hc_sr04Success) {
+        if(pdTRUE == hc_sr04Success) {
             // The received duration of the pulse is equal to the time between sending out a ultrasonic pulse and
             // receiving its echo in microseconds. As such, the formula to calculate the distance from this value is d =
             // speedOfSound(cm/us) * time(us) / 2 Technically the speed of sound also depends on temperature but we
@@ -186,7 +187,7 @@ void sensorTask(void* pvParameters) {
                 serialPrintf(">VL53L0X:%i:%lu|np\n", currentAngle, vl53l0x_range_mm);
             }
         }
-        if(hc_sr04Success){
+        if(pdTRUE == hc_sr04Success){
             serialPrintf(">HC-SR04:%i:%lu|np\n", currentAngle, hc_sr04_range_mm);
         }
 

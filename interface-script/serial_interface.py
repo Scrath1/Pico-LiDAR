@@ -4,6 +4,7 @@ import threading
 import queue
 import struct
 import time
+from collections import namedtuple
 
 class _CmdInstruction(Enum):
     NONE = 0
@@ -24,6 +25,8 @@ class _ParameterId(Enum):
     SERIAL_ERROR_COUNTER = 9
 
 CMD_START_DELIM = 0b01010101
+
+PublishedValue = namedtuple('PublishedValue', ['timestamp', 'value'])
 
 parameter_keys: dict = {_ParameterId.NONE: 'None',
                         _ParameterId.KP: 'K_p',
@@ -97,13 +100,21 @@ def get_timestamp_ms() -> int:
     return round((time.time() - _program_start_time) * 1000)
 
 def _publish(key: str, value: float | list[float]) -> bool:
+    pv = PublishedValue(timestamp=get_timestamp_ms(), value=value)
     if key not in _subscribers:
         return False
     for q in _subscribers[key]:
         if q.full():
             q.get_nowait()
-        q.put((get_timestamp_ms(), value))
+        q.put(pv)
     return True
+
+def get_published_values(q: queue.Queue) -> list[PublishedValue]:
+    out = list()
+    while q.qsize() > 0:
+        pv: PublishedValue = q.get()
+        out.append(pv)
+    return out
 
 def _build_cmd_frame(cmd: _CmdInstruction, tgt: _ParameterId, value: float | int = 0) -> bytearray:
     bytes = bytearray()
@@ -184,7 +195,7 @@ def _writeSerialThread():
                 except serial.PortNotOpenError:
                     time.sleep(1)
             _cmd_frame_queue.task_done()
-            time.sleep(0.01) # sleep 10ms between commands
+            # time.sleep(0.01) # sleep 10ms between commands
 
 def init_serial(port: str, baud: int) -> bool:
     global _internal_queues
@@ -257,6 +268,9 @@ def start_motor():
 
 def stop_motor():
     _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, 0))
+
+def set_motor_state(val: bool):
+    _enqueueCmdFrame(_build_cmd_frame(_CmdInstruction.SET, _ParameterId.ENABLE_MOTOR, int(val)))
 
 def get_motor_state() -> bool:
     return bool(_request_and_wait(_ParameterId.ENABLE_MOTOR))
