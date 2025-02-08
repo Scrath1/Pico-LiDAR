@@ -120,7 +120,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         si.reset_mcu()
         
     def btn_handler_rpm_plot_reset(self):
-        print("reset RPM plot")
+        self._measured_rpm.clear()
+        self._target_rpm.clear()
+        self._pwm.clear()
         
     def btn_handler_lidar_plot_reset(self):
         print("reset lidar plot")
@@ -167,10 +169,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             for v in vals:
                 angle = v.value[0]
                 distance = v.value[1]
-                data = MainWindow.LidarData(timestamp=v.timestamp, angle=angle, distance=distance, x_coord=0, y_coord=0)
+                data = None
                 if angle != -1:
-                    data.x_coord = distance * np.cos(math.radians(angle))
-                    data.y_coord = distance * np.sin(math.radians(angle))
+                    x = distance * np.cos(math.radians(angle))
+                    y = distance * np.sin(math.radians(angle))
+                    data = MainWindow.LidarData(timestamp=v.timestamp, angle=angle, distance=distance, x_coord=x, y_coord=y)
+                else:
+                    data = MainWindow.LidarData(timestamp=v.timestamp, angle=angle, distance=distance, x_coord=0, y_coord=0)
                 out.append(data)
             return out
         vals = si.get_published_values(self._measured_rpm_queue)
@@ -187,7 +192,45 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
     def plot_handler_update(self):
         self.pull_queue_data()
+        self.draw_rpm_plot()
         # print("Plot update")
+        
+    def draw_rpm_plot(self):
+        fig = self.ui.plot_rpm.fig
+        fig.clear()
+        measured_rpm_timestamps = [v.timestamp for v in self._measured_rpm]
+        measured_rpm_values = [v.value for v in self._measured_rpm]
+        target_rpm_timestamps = [v.timestamp for v in self._target_rpm]
+        target_rpm_values = [v.value for v in self._target_rpm]
+        # define plot limits for the rpm and pwm plots
+        limits = [{0, max(measured_rpm_values + target_rpm_values + [60]) * 2},{0, 100}]
+        
+        if len(self._measured_rpm) > 0 and len(self._target_rpm) > 0:
+            rpm_plot = fig.add_subplot()
+            color_mRPM = "C0"
+            color_tRPM = "C1"
+            rpm_plot.set_ylim(limits[0])
+            rpm_plot.set_ylim(limits[0])
+            rpm_plot.plot(measured_rpm_timestamps, measured_rpm_values, label="measured RPM", color=color_mRPM)
+            rpm_plot.plot(target_rpm_timestamps, target_rpm_values, label="target RPM", color=color_tRPM)
+            rpm_plot.set_xlabel("Timestamp (ms)")
+            rpm_plot.set_ylabel("RPM")
+            rpm_plot.legend()
+            rpm_plot.grid()
+
+        if len(self._pwm) > 0:
+            pwm_timestamps = [v.timestamp for v in self._pwm]
+            pwm_values = [v.value for v in self._pwm]
+            pwm_plot = fig.add_subplot(frame_on=False)
+            pwm_plot.set_ylim(limits[1])
+            color_pwm = "C2"
+            pwm_plot.plot(pwm_timestamps, pwm_values, label="PWM", color=color_pwm)
+            pwm_plot.set_ylabel("PWM Duty Cycle", color=color_pwm)
+            pwm_plot.tick_params(axis='y', colors=color_pwm)
+            pwm_plot.yaxis.set_label_position('right')
+            pwm_plot.yaxis.set_ticks_position('right')
+            pwm_plot.set_xticks([])
+        self.ui.plot_rpm.draw()
 
 def run_gui():
     app = QApplication(sys.argv)

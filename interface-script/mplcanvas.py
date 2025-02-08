@@ -5,12 +5,14 @@ from matplotlib.figure import Figure
 
 class MplCanvas(FigureCanvasQTAgg):
     def __init__(self, parent=None, width=5, height=4, dpi=100):
-        fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = fig.add_subplot(111)
-        super().__init__(fig)
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        super().__init__(self.fig)
     
-    def clear(self):
-        return
-    
-    def update(self):
-        return
+    # def set_plot_setup_func(self, func):
+    #     self._plot_setup_function = func
+        
+    # def set_plot_func(self, func):
+    #     self._plot_function = func
+        
+    # def plot(self, x, y):
+    #     self._plot_function(x, y)
