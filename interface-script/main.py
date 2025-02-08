@@ -30,64 +30,6 @@ def read_args_file(file: str) -> list[str]:
             out += s
     return out
 
-def _get_queued_values(q: queue) -> list:
-    out = list()
-    while True:
-        try:
-            ts, vals = q.get_nowait()
-            out.append((ts, vals))
-        except queue.Empty:
-            return out
-
-def _create_lidar_plot():
-    plt.figure(num=fig_id)
-    plt.grid(True)
-
-def _update_lidar_plot():
-    global vl53l0x_values, hc_sr04_values
-    vl53l0x_ts_vals = _get_queued_values(vl53l0x_queue)
-    hc_sr04_ts_vals = _get_queued_values(hc_sr04_queue)
-    # First process the values. Filter out all values with unknown angle
-    vl53l0x_ts_vals = [v for v in vl53l0x_ts_vals if v[1][0]!=-1]
-    hc_sr04_ts_vals = [v for v in hc_sr04_ts_vals if v[1][0]!=-1]
-    # Next filter out all values with an unrealistic measurement and add new data
-    # to existing value list
-    vl53l0x_values += [v for v in vl53l0x_ts_vals if v[1][1] < VL53L0X_MAX_VALID_DISTANCE_MM]
-    hc_sr04_values += [v for v in hc_sr04_ts_vals if v[1][1] < HC_SR04_MAX_VALID_DISTANCE_MM]
-    # Remove all data which is older by max_data_age_s than the newest data points.
-    # If age is 0 or less, skip this step
-    if max_data_age_ms > 0 and len(vl53l0x_values) > 0:
-        cutoff_age_ms = vl53l0x_values[-1][0] - max_data_age_ms
-        vl53l0x_values = [v for v in vl53l0x_values if v[0] >= cutoff_age_ms]
-    if max_data_age_ms > 0 and len(hc_sr04_values) > 0:
-        cutoff_age_ms = hc_sr04_values[-1][0] - max_data_age_ms
-        hc_sr04_values = [v for v in hc_sr04_values if v[0] >= cutoff_age_ms]
-    
-    fig = plt.figure(num=fig_id)
-    fig.clear()
-    lidar_plot = fig.add_subplot()
-    lidar_plot.grid()
-    lidar_plot.axhline(y=0, color='r', linestyle='-')
-    lidar_plot.axvline(x=0, color='r', linestyle='-')
-
-    if len(vl53l0x_values) < 1 and len(hc_sr04_values) < 1:
-        lidar_plot.text(0.5, 0.5, "No data")
-    else:
-        # calculate x and y coordinates for each [angle, distance] value
-        angle_distance_list = [v[1] for v in vl53l0x_values]
-        vl53l0x_x_coords = [d * np.cos(math.radians(a)) for [a,d] in angle_distance_list]
-        vl53l0x_y_coords = [d * np.sin(math.radians(a)) for [a,d] in angle_distance_list]
-        angle_distance_list = [v[1] for v in hc_sr04_values]
-        hc_sr04_x_coords = [d * np.cos(math.radians(a)) for [a,d] in angle_distance_list]
-        hc_sr04_y_coords = [d * np.sin(math.radians(a)) for [a,d] in angle_distance_list]
-        lidar_plot.set_xlabel("X Position (mm)")
-        lidar_plot.set_ylabel("Y Position (mm)")
-        lidar_plot.scatter(vl53l0x_x_coords, vl53l0x_y_coords, color="r", label="VL53L0X")
-        lidar_plot.scatter(hc_sr04_x_coords, hc_sr04_y_coords, color="b", label="HC-SR04")
-        lidar_plot.legend()
-    plt.show(block=False)
-    plt.pause(0.001) # needed to update the gui
-
 def _send_args(args):
     if(args.kp):
         si.set_kp(args.kp)
@@ -147,22 +89,16 @@ def main():
     
     if(args.no_gui):
         si.start_motor()
+        while(True):
+            # Loop forever until the process is cancelled
+            continue
     else:
         run_gui()
 
-    # global vl53l0x_queue, hc_sr04_queue
-    # vl53l0x_queue = si.subscribe("VL53L0X")
-    # hc_sr04_queue = si.subscribe("HC-SR04")
-    # _create_lidar_plot()
-
-    # while plt.fignum_exists(fig_id):
-    #     _update_lidar_plot()
-    #     time.sleep(0.1)
-
     # Before exiting, stop motor
-    # si.stop_motor()
+    si.stop_motor()
     # sleep is necessary so stop message can be sent before program exits
-    # time.sleep(0.05)
+    time.sleep(0.05)
 
 if __name__=="__main__":
     main()

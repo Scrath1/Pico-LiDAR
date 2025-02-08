@@ -34,7 +34,7 @@ SettingContainer = namedtuple('SettingContainer', ["value", "getter", "setter", 
 class MainWindow(QMainWindow, Ui_MainWindow):
     # UI elements
     _plot_update_timer = QTimer()
-    _plot_update_interval_ms = 1000
+    _plot_update_interval_ms = 250
     
     # Setting value holders
     # Widget connections are initialized later
@@ -125,7 +125,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._pwm.clear()
         
     def btn_handler_lidar_plot_reset(self):
-        print("reset lidar plot")
+        self._hc_sr04.clear()
+        self._vl53l0x.clear()
         
     def checkbox_handler_motor_on(self):
         if self.ui.checkBox_motor_on.checkState() == Qt.CheckState.Checked:
@@ -193,7 +194,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def plot_handler_update(self):
         self.pull_queue_data()
         self.draw_rpm_plot()
-        # print("Plot update")
+        self.draw_lidar_plot()
         
     def draw_rpm_plot(self):
         fig = self.ui.plot_rpm.fig
@@ -231,6 +232,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             pwm_plot.yaxis.set_ticks_position('right')
             pwm_plot.set_xticks([])
         self.ui.plot_rpm.draw()
+        
+    def draw_lidar_plot(self):
+        # ToDo: Add slider for selecting limits
+        # ToDo: Filter out too old data
+        # ToDo: Fix window scaling for fullscreen support
+        vl53l0x_x = [v.x_coord for v in self._vl53l0x]
+        vl53l0x_y = [v.y_coord for v in self._vl53l0x]
+        hc_sr04_x = [v.x_coord for v in self._hc_sr04]
+        hc_sr04_y = [v.y_coord for v in self._hc_sr04]
+        
+        fig = self.ui.plot_lidar.fig
+        fig.clear()
+        lidar_plot = fig.add_subplot()
+        lidar_plot.grid()
+        lidar_plot.axhline(y=0, color='r', linestyle='-')
+        lidar_plot.axvline(x=0, color='r', linestyle='-')
+        
+        if len(vl53l0x_x) > 1 or len(hc_sr04_x) > 1:
+            lidar_plot.set_xlabel("X Position (mm)")
+            lidar_plot.set_ylabel("Y Position (mm)")
+            lidar_plot.scatter(vl53l0x_x, vl53l0x_y, color="r", label="VL53L0X")
+            lidar_plot.scatter(hc_sr04_x, hc_sr04_y, color="b", label="HC-SR04")
+            lidar_plot.legend()
+        else:
+            lidar_plot.text(0.5, 0.5, "No data")
+        
+        self.ui.plot_lidar.draw()
 
 def run_gui():
     app = QApplication(sys.argv)
