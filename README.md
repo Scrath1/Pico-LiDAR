@@ -51,6 +51,8 @@ and the the HC-SR04P ultrasonic sensor.
 - 1x 70x30mm Perfboard. Used for mounting interfaces and power connectors.
   Can be slightly larger and can be cut up from a larger board as long
   as the holes for mounting are present.
+- (Optional) ESP01 or other ESP8266-based controller for wireless connectivity
+  using esp-link.
 </details>
 
 ## Assembly instruction
@@ -65,13 +67,51 @@ Depending on which DC motor you get the mounting holes on the corresponding
 3D printed bracket may not line up. In that case you will need to edit the model
 yourself or drill fitting holes in the existing part.
 
-3D files for editing will be provided.
+The 3D model is located in the [model](./model/) directory as a step file.
 
 ## Setup
 ### Installing dependencies
 
+### Connections
+Commands and communication from and to the LiDAR module are done using UART0
+serial port of the pico, for which GP0 is the Tx pin and GP1 is Rx.
+
+**Option 1: Connecting using USB serial adapter**
+
+You can connect directly to the LiDAR module by using a USB serial adapter
+connected to the aforementioned Rx and Tx pins.
+The LiDAR uses a serial port configuration of 115200 baud 8N1.
+
+The command for the interface script in that case would be.
+> python interface-script/main.py -p \<serial-port>
+
+Optionally you can specify the baudrate using `-b` but the default is set to
+115200.
+
+**Option 2: Wireless connection using esp-link**
+
+When connecting to the device, either a USB serial adapter can be used, or an
+ESP8266 module which was flashed using
+[esp-link](https://github.com/jeelabs/esp-link)
+
+The esp-link is again connected to the Rx and Tx pins using 115200 baud 8N1.
+To connect the interface script to the esp-link use the `-d` parameter to specify
+the devices hostname or ip-address.
+> python interface-script/main.py -d \<hostname>
+
 ## Usage
 ### args file
+All cli arguments you can pass to the interface script can also be written in a
+plain text file to be passed to the program instead by using the `-f` parameter.
+
+This is an example of what the content of this file could look like:
+```
+-p COM7
+-r
+-a 5000
+```
+The command to use this file would be
+> python interface-script/main.py -f \<path to file>
 
 ## Attributions for CAD models
 Unfortunately I did not keep track of the origin of 3D CAD models used

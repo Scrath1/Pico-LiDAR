@@ -14,7 +14,7 @@ matplotlib.use("QtAgg")
 import queue
 import argparse
 from misc import Setting, SettingContainer, LidarData, append_rle_encoded, to_lidar_data
-import serial_interface as si
+import interface as it
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -31,11 +31,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     _scan_angle_offset = Setting()
 
     # Plot value holders and corresponding queues for receiving data
-    _measured_rpm: list[si.PublishedValue] = list()
+    _measured_rpm: list[it.PublishedValue] = list()
     _measured_rpm_queue = queue.Queue()
-    _target_rpm: list[si.PublishedValue] = list()
+    _target_rpm: list[it.PublishedValue] = list()
     _target_rpm_queue = queue.Queue()
-    _pwm: list[si.PublishedValue] = list()
+    _pwm: list[it.PublishedValue] = list()
     _pwm_queue = queue.Queue()
     _vl53l0x: list[LidarData] = list()
     _vl53l0x_queue = queue.Queue()
@@ -53,50 +53,50 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.settings = {
             "Kp": SettingContainer(
                 value=Setting(),
-                getter=si.get_kp,
-                setter=si.set_kp,
+                getter=it.get_kp,
+                setter=it.set_kp,
                 widget=self.ui.doubleSpinBox_kp,
             ),
             "Ki": SettingContainer(
                 value=Setting(),
-                getter=si.get_ki,
-                setter=si.set_ki,
+                getter=it.get_ki,
+                setter=it.set_ki,
                 widget=self.ui.doubleSpinBox_ki,
             ),
             "Kd": SettingContainer(
                 value=Setting(),
-                getter=si.get_kd,
-                setter=si.set_kd,
+                getter=it.get_kd,
+                setter=it.set_kd,
                 widget=self.ui.doubleSpinBox_kd,
             ),
             "targetRPM": SettingContainer(
                 value=Setting(),
-                getter=si.get_target_rpm,
-                setter=si.set_target_rpm,
+                getter=it.get_target_rpm,
+                setter=it.set_target_rpm,
                 widget=self.ui.spinBox_tgt_rpm,
             ),
             "motorOn": SettingContainer(
                 value=Setting(),
-                getter=si.get_motor_state,
+                getter=it.get_motor_state,
                 setter=None,
                 widget=self.ui.checkBox_motor_on,
             ),  # Setter handled using Qt checkbox handler
             "PointsPerRev": SettingContainer(
                 value=Setting(),
-                getter=si.get_datapoints_per_rev,
-                setter=si.set_datapoints_per_rev,
+                getter=it.get_datapoints_per_rev,
+                setter=it.set_datapoints_per_rev,
                 widget=self.ui.spinBox_points_per_rev,
             ),
             "Vl53L0X_Budget": SettingContainer(
                 value=Setting(),
-                getter=si.get_vl53l0x_budget,
-                setter=si.set_vl53l0x_budget,
+                getter=it.get_vl53l0x_budget,
+                setter=it.set_vl53l0x_budget,
                 widget=self.ui.spinBox_vl53l0x_budget,
             ),
             "angleOffset": SettingContainer(
                 value=Setting(),
-                getter=si.get_angle_offset,
-                setter=si.set_angle_offset,
+                getter=it.get_angle_offset,
+                setter=it.set_angle_offset,
                 widget=self.ui.spinBox_angle_offset,
             ),
         }
@@ -138,11 +138,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._lidar_data_max_age_ms = val
 
     def subscribe_data_sources(self):
-        self._measured_rpm_queue = si.subscribe("measuredRPM", 200)
-        self._target_rpm_queue = si.subscribe("targetRPM", 200)
-        self._pwm_queue = si.subscribe("PWM", 200)
-        self._vl53l0x_queue = si.subscribe("VL53L0X", 200)
-        self._hc_sr04_queue = si.subscribe("HC-SR04", 200)
+        self._measured_rpm_queue = it.subscribe("measuredRPM", 200)
+        self._target_rpm_queue = it.subscribe("targetRPM", 200)
+        self._pwm_queue = it.subscribe("PWM", 200)
+        self._vl53l0x_queue = it.subscribe("VL53L0X", 200)
+        self._hc_sr04_queue = it.subscribe("HC-SR04", 200)
 
     def btn_handler_read_from_device(self):
         for k, s in self.settings.items():
@@ -162,7 +162,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     s.value.acknowledge_change()
 
     def btn_handler_reset_device(self):
-        si.reset_mcu()
+        it.reset_mcu()
 
     def btn_handler_rpm_plot_reset(self):
         self._measured_rpm.clear()
@@ -181,10 +181,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def checkbox_handler_motor_on(self):
         if self.ui.checkBox_motor_on.checkState() == Qt.CheckState.Checked:
-            si.start_motor()
+            it.start_motor()
             print("Motor on")
         else:
-            si.stop_motor()
+            it.stop_motor()
             print("Motor off")
 
     def spinbox_handler_kp(self):
@@ -216,15 +216,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.settings["angleOffset"].value.set(w.value())
 
     def pull_queue_data(self):
-        vals = si.get_published_values(self._measured_rpm_queue)
+        vals = it.get_published_values(self._measured_rpm_queue)
         append_rle_encoded(vals, self._measured_rpm)
-        vals = si.get_published_values(self._target_rpm_queue)
+        vals = it.get_published_values(self._target_rpm_queue)
         append_rle_encoded(vals, self._target_rpm)
-        vals = si.get_published_values(self._pwm_queue)
+        vals = it.get_published_values(self._pwm_queue)
         append_rle_encoded(vals, self._pwm)
-        vals = si.get_published_values(self._vl53l0x_queue)
+        vals = it.get_published_values(self._vl53l0x_queue)
         self._vl53l0x += to_lidar_data(vals)
-        vals = si.get_published_values(self._hc_sr04_queue)
+        vals = it.get_published_values(self._hc_sr04_queue)
         self._hc_sr04 += to_lidar_data(vals)
 
     def plot_handler_update(self):
@@ -242,10 +242,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # define plot y limits for the rpm and pwm plots
         ylimits_rpm = [0, max(measured_rpm_values + target_rpm_values + [60]) * 2]
         ylimits_pwm = [0, 100]
-        xlimits = [
-            measured_rpm_timestamps[-1] + self._rpm_plot_range,
-            measured_rpm_timestamps[-1],
-        ]
+        xlimits = [0]
+        if len(measured_rpm_timestamps) > 0:
+            xlimits = [
+                measured_rpm_timestamps[-1] + self._rpm_plot_range,
+                measured_rpm_timestamps[-1],
+            ]
 
         if len(self._measured_rpm) > 0 and len(self._target_rpm) > 0:
             rpm_plot = fig.add_subplot()
@@ -299,7 +301,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def draw_lidar_plot(self):
         # Discard data that is too old
-        cutoff_timestamp_ms = si.get_timestamp_ms() - self._lidar_data_max_age_ms
+        cutoff_timestamp_ms = it.get_timestamp_ms() - self._lidar_data_max_age_ms
         self._vl53l0x = [v for v in self._vl53l0x if v.timestamp > cutoff_timestamp_ms]
         self._hc_sr04 = [v for v in self._hc_sr04 if v.timestamp > cutoff_timestamp_ms]
 
