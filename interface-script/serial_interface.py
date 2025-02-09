@@ -4,7 +4,8 @@ import threading
 import queue
 import struct
 import time
-from collections import namedtuple
+import math
+from dataclasses import dataclass
 
 class _CmdInstruction(Enum):
     NONE = 0
@@ -26,7 +27,31 @@ class _ParameterId(Enum):
 
 CMD_START_DELIM = 0b01010101
 
-PublishedValue = namedtuple('PublishedValue', ['timestamp', 'value'])
+@dataclass
+class PublishedValue:
+    timestamp: int
+    value: float | list[float]
+
+    def values_approx_equal(self, other) -> bool:
+        if isinstance(self.value, float) and isinstance(other.value, float):
+            # 2 float values are easy to compare
+            return math.isclose(self.value, other.value)
+        elif isinstance(self.value, list) and isinstance(other.value, list):
+            # In case of 2 lists, check that the length of both is equal first
+            if len(self.value) == len(other.value):
+                # Iterate over every item in both lists. While each
+                # item at i is equal to the corresponding in other, don't return
+                for i in range(0, len(self.value)):
+                    if not math.isclose(self.value[i], other.value[i]):
+                        return False
+                # If there were no unequal items, return true
+                return True
+            else:
+                # Lists have different lengths and must be unequal
+                return False
+        else:
+            # self.value and other.value have different types
+            return False
 
 parameter_keys: dict = {_ParameterId.NONE: 'None',
                         _ParameterId.KP: 'K_p',
@@ -226,9 +251,9 @@ def _request_and_wait(id: _ParameterId, timeout: float = 0.2) -> float:
     while True:
         try:
             # Search for a result that is newer than the request time
-            ts, val = _internal_queues[id].get(timeout = timeout)
-            if ts > cur_timestamp:
-                return val
+            pv: PublishedValue = _internal_queues[id].get(timeout = timeout)
+            if pv.timestamp > cur_timestamp:
+                return pv.value
         except queue.Empty:
             # If no result was found after the queue timed out once, return 0
             return 0

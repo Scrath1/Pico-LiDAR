@@ -14,7 +14,7 @@ matplotlib.use("QtAgg")
 import queue
 import numpy as np
 import math
-from misc_types import Setting, SettingContainer, LidarData
+from misc import Setting, SettingContainer, LidarData, append_rle_encoded, to_lidar_data
 import serial_interface as si
 
 
@@ -214,39 +214,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.settings["angleOffset"].value.set(w.value())
 
     def pull_queue_data(self):
-        def to_lidar_data(vals: si.PublishedValue) -> list[LidarData]:
-            out = list()
-            for v in vals:
-                angle = v.value[0]
-                distance = v.value[1]
-                data = None
-                if angle != -1:
-                    x = distance * np.cos(math.radians(angle))
-                    y = distance * np.sin(math.radians(angle))
-                    data = LidarData(
-                        timestamp=v.timestamp,
-                        angle=angle,
-                        distance=distance,
-                        x_coord=x,
-                        y_coord=y,
-                    )
-                else:
-                    data = LidarData(
-                        timestamp=v.timestamp,
-                        angle=angle,
-                        distance=distance,
-                        x_coord=0,
-                        y_coord=0,
-                    )
-                out.append(data)
-            return out
-
         vals = si.get_published_values(self._measured_rpm_queue)
-        self._measured_rpm += vals
+        append_rle_encoded(vals, self._measured_rpm)
         vals = si.get_published_values(self._target_rpm_queue)
-        self._target_rpm += vals
+        append_rle_encoded(vals, self._target_rpm)
         vals = si.get_published_values(self._pwm_queue)
-        self._pwm += vals
+        append_rle_encoded(vals, self._pwm)
         vals = si.get_published_values(self._vl53l0x_queue)
         self._vl53l0x += to_lidar_data(vals)
         vals = si.get_published_values(self._hc_sr04_queue)
