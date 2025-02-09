@@ -1,5 +1,5 @@
 from collections import namedtuple
-from serial_interface import PublishedValue
+from interface import PublishedValue
 import math
 import numpy as np
 
