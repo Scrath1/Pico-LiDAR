@@ -91,7 +91,7 @@
 // required for getting the sensor readings. Increase if you get
 // warnings about timing violations
 #define SENSOR_SCAN_EXTRA_TIME_BUDGET_MS (12)
-#define DEFAULT_ANGLE_OFFSET (0)
+#define DEFAULT_ANGLE_OFFSET (-45)
 
 // SIGNAL AGE
 // ==============================================================

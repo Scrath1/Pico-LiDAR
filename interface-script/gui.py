@@ -12,8 +12,7 @@ import matplotlib
 
 matplotlib.use("QtAgg")
 import queue
-import numpy as np
-import math
+import argparse
 from misc import Setting, SettingContainer, LidarData, append_rle_encoded, to_lidar_data
 import serial_interface as si
 
@@ -43,8 +42,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     _hc_sr04: list[LidarData] = list()
     _hc_sr04_queue = queue.Queue()
 
-    # lidar_plot_range
     _lidar_plot_range: int = 0
+    _lidar_data_max_age_ms: int = 0
     _rpm_plot_range: int = 0
 
     def __init__(self, parent=None):
@@ -134,6 +133,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.ui.slider_range_lidar_plot.valueChanged.connect(
             self.slider_handler_lidar_plot_range
         )
+
+    def set_lidar_data_max_age_ms(self, val: int):
+        self._lidar_data_max_age_ms = val
 
     def subscribe_data_sources(self):
         self._measured_rpm_queue = si.subscribe("measuredRPM", 200)
@@ -256,7 +258,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             else:
                 # Set limit based on age
                 rpm_plot.set_xlim(left=xlimits[0], right=xlimits[1])
-            # ToDo: Set RPM Plot limits
             rpm_plot.plot(
                 measured_rpm_timestamps,
                 measured_rpm_values,
@@ -297,9 +298,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.ui.plot_rpm.draw()
 
     def draw_lidar_plot(self):
-        # ToDo: Add slider for selecting limits
-        # ToDo: Filter out too old data
-        # ToDo: Fix window scaling for fullscreen support
+        # Discard data that is too old
+        cutoff_timestamp_ms = si.get_timestamp_ms() - self._lidar_data_max_age_ms
+        self._vl53l0x = [v for v in self._vl53l0x if v.timestamp > cutoff_timestamp_ms]
+        self._hc_sr04 = [v for v in self._hc_sr04 if v.timestamp > cutoff_timestamp_ms]
+
         vl53l0x_x = [v.x_coord for v in self._vl53l0x]
         vl53l0x_y = [v.y_coord for v in self._vl53l0x]
         hc_sr04_x = [v.x_coord for v in self._hc_sr04]
@@ -328,12 +331,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
 app = None
-
-
-def run_gui():
+def run_gui(args: argparse.Namespace):
     global app
     app = QApplication(sys.argv)
     window = MainWindow()
+    if(args.age):
+        window.set_lidar_data_max_age_ms(args.age)
     window.show()
     return app.exec()
 

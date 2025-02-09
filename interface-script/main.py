@@ -93,7 +93,7 @@ def main():
             # Loop forever until the process is cancelled
             continue
     else:
-        return_code = run_gui()
+        return_code = run_gui(args)
 
     # Before exiting, stop motor
     si.stop_motor()
