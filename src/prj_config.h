@@ -26,11 +26,11 @@
 // Default motor rotation target speed
 #define MOTOR_TARGET_SPEED (200)
 // Defines the value which represents a PWM duty cycle of 100%
-#define PWM_FULL_VALUE (1024)
+#define PWM_FULL_VALUE (32767)
 // PID control P constant
-#define K_P (0.05)
+#define K_P (1.6)
 // PID control I constant
-#define K_I (0.1)
+#define K_I (3.2)
 // PID control D constant
 #define K_D (0)
 // Interval with which the PID control loop is run in milliseconds
@@ -38,8 +38,8 @@
 // Minimum PID controller output value
 #define PID_MIN_OUT (0)
 // Maximum PID controller output value
-#define PID_MAX_OUT (MAX_TARGET_RPM)
-// Maximum PID constant value for error checking purposes
+#define PID_MAX_OUT (PWM_FULL_VALUE)
+// Maximum PID constant value for very basic error checking purposes
 #define PID_CONSTANT_MAX (10)
 // Number of PID intervals over which the measured RPM has to be relatively
 // constant before being declared stable

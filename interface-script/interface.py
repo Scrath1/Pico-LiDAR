@@ -113,6 +113,7 @@ def subscribe(key: str, max_size: int = 0) -> queue:
 def process():
     global _rx_queue
     data_point_msg = ""
+    receiving_data_point = False
     while True:
         c = _rx_queue.get()
         _rx_queue.task_done()
