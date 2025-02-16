@@ -9,6 +9,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer
 from window import Ui_MainWindow
 import matplotlib
+import numpy as np
+import math
 
 matplotlib.use("QtAgg")
 import queue
@@ -305,28 +307,26 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._vl53l0x = [v for v in self._vl53l0x if v.timestamp > cutoff_timestamp_ms]
         self._hc_sr04 = [v for v in self._hc_sr04 if v.timestamp > cutoff_timestamp_ms]
 
-        vl53l0x_x = [v.x_coord for v in self._vl53l0x]
-        vl53l0x_y = [v.y_coord for v in self._vl53l0x]
-        hc_sr04_x = [v.x_coord for v in self._hc_sr04]
-        hc_sr04_y = [v.y_coord for v in self._hc_sr04]
+        vl53l0x_a = [math.radians(v.angle) for v in self._vl53l0x if v.angle != -1]
+        vl53l0x_d = [v.distance for v in self._vl53l0x if v.angle != -1]
+        hc_sr04_a = [math.radians(v.angle) for v in self._hc_sr04 if v.angle != -1]
+        hc_sr04_d = [v.distance for v in self._hc_sr04 if v.angle != -1]
 
         fig = self.ui.plot_lidar.fig
         fig.clear()
-        lidar_plot = fig.add_subplot()
-        lidar_plot.grid()
-        lidar_plot.axhline(y=0, color="r", linestyle="-")
-        lidar_plot.axvline(x=0, color="r", linestyle="-")
-        bottom = -self._lidar_plot_range
-        upper = self._lidar_plot_range
-        lidar_plot.set_ylim(bottom, upper)
-        lidar_plot.set_xlim(bottom, upper)
-        lidar_plot.set_aspect("equal")
+        lidar_plot = fig.add_subplot(projection = 'polar')
+        lidar_plot.grid(True)
+        lidar_plot.set_ylim(0, self._lidar_plot_range)
+        # Make 0 degree face north and invert angle direction
+        lidar_plot.set_theta_zero_location("N")
+        lidar_plot.set_theta_direction(-1)
 
-        if len(vl53l0x_x) > 1 or len(hc_sr04_x) > 1:
-            lidar_plot.set_xlabel("X Position (mm)")
-            lidar_plot.set_ylabel("Y Position (mm)")
-            lidar_plot.scatter(vl53l0x_x, vl53l0x_y, color="r", label="VL53L0X")
-            lidar_plot.scatter(hc_sr04_x, hc_sr04_y, color="b", label="HC-SR04")
+        # Add spaced distance markers
+        rticks = np.linspace(0, self._lidar_plot_range, num=5)
+        lidar_plot.set_rticks(rticks)
+        if len(vl53l0x_a) > 1 or len(hc_sr04_a) > 1:
+            lidar_plot.scatter(vl53l0x_a, vl53l0x_d, color="r", label="VL53L0X")
+            lidar_plot.scatter(hc_sr04_a, hc_sr04_d, color="b", label="HC-SR04")
             lidar_plot.legend()
 
         self.ui.plot_lidar.draw()

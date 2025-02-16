@@ -26,7 +26,7 @@ SettingContainer = namedtuple(
     "SettingContainer", ["value", "getter", "setter", "widget"]
 )
 LidarData = namedtuple(
-    "LidarData", ["timestamp", "angle", "distance", "x_coord", "y_coord"]
+    "LidarData", ["timestamp", "angle", "distance"]
 )
 
 def to_lidar_data(vals: PublishedValue) -> list[LidarData]:
@@ -34,24 +34,10 @@ def to_lidar_data(vals: PublishedValue) -> list[LidarData]:
     for v in vals:
         angle = v.value[0]
         distance = v.value[1]
-        data = None
-        if angle != -1:
-            x = distance * np.cos(math.radians(angle))
-            y = distance * np.sin(math.radians(angle))
-            data = LidarData(
+        data = LidarData(
                 timestamp=v.timestamp,
                 angle=angle,
                 distance=distance,
-                x_coord=x,
-                y_coord=y,
-            )
-        else:
-            data = LidarData(
-                timestamp=v.timestamp,
-                angle=angle,
-                distance=distance,
-                x_coord=0,
-                y_coord=0,
             )
         out.append(data)
     return out
