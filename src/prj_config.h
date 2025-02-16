@@ -24,7 +24,7 @@
 // Maximum target speed for the motor
 #define MAX_TARGET_RPM (1000)
 // Default motor rotation target speed
-#define MOTOR_TARGET_SPEED (200)
+#define MOTOR_TARGET_SPEED (120)
 // Defines the value which represents a PWM duty cycle of 100%
 #define PWM_FULL_VALUE (32767)
 // PID control P constant
@@ -91,7 +91,12 @@
 // required for getting the sensor readings. Increase if you get
 // warnings about timing violations
 #define SENSOR_SCAN_EXTRA_TIME_BUDGET_MS (12)
+// Default offset by which to rotate any angle value
 #define DEFAULT_ANGLE_OFFSET (-45)
+// Distance of the HC-SR04 sensor from the the rotation center
+#define HC_SR04_CENTER_OFFSET_MM (35)
+// Distance of the VL53L0X sensor from the the rotation center
+#define VL53L0X_CENTER_OFFSET_MM (44)
 
 // SIGNAL AGE
 // ==============================================================

@@ -240,7 +240,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         target_rpm_timestamps = [v.timestamp for v in self._target_rpm]
         target_rpm_values = [v.value for v in self._target_rpm]
         # define plot y limits for the rpm and pwm plots
-        ylimits_rpm = [0, max(measured_rpm_values + target_rpm_values + [60]) * 2]
+        ylimits_rpm = [0, max(measured_rpm_values + target_rpm_values + [60]) * 1.5]
         ylimits_pwm = [0, 100]
         xlimits = [0]
         if len(measured_rpm_timestamps) > 0:
