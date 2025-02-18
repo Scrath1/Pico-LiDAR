@@ -270,6 +270,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 target_rpm_values,
                 label="target RPM",
                 color=color_tRPM,
+                linestyle='dashed'
             )
             rpm_plot.set_xlabel("Timestamp (ms)")
             rpm_plot.set_ylabel("RPM")

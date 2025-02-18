@@ -18,12 +18,7 @@
 #include "tasks/serial_tx_task.h"
 #include "tasks/signal_age_check_task.h"
 
-#define TARGET_RPM_MIN_THRESHOLD (60)
-#define TARGET_RPM_FILTER_SIZE (16)
-
-AVERAGING_FILTER_DEF(hallIntervalFilter, 4);
 AVERAGING_FILTER_DEF(measuredRPMFilter, RPM_AVERAGING_FILTER_SIZE);
-AVERAGING_FILTER_DEF(targetRPMFilter, TARGET_RPM_FILTER_SIZE);
 
 void consoleLogger(ulog_level_t severity, char* msg) {
     char fmsg[DBG_MESSAGE_MAX_LEN];
@@ -66,40 +61,22 @@ void hallSensorISR(uint32_t events) {
         const uint32_t interval_us = currentTime_us - lastPulseTime_us;
         lastPulseTime_us = currentTime_us;
 
-        // add it to array of pulse times for averaging
-        averaging_filter_put(&hallIntervalFilter, interval_us);
-        uint32_t averageInterval_us = averaging_filter_get_avg(&hallIntervalFilter);
-
-        averageInterval_us = interval_us;
-
         // calculate actual axle rotation speed
-        // Note: For some reason trying to replace this manual filtering
-        // with the averaging filter used above results in extreme spikes in measurements
-        // ToDo: Find reason and fix
         static uint32_t rpmMeasurements[RPM_AVERAGING_FILTER_SIZE];
         static const uint32_t rpmMeasurementsSize = sizeof(rpmMeasurements) / sizeof(rpmMeasurements[0]);
         static uint32_t rpmMeasurementsNextIdx = 0;
         // Step 1. Calculate pulse interval in seconds instead of microsends
-        float calc = static_cast<float>(averageInterval_us) / 1E6;
+        float calc = static_cast<float>(interval_us) / 1E6;
         // Step 2. Multiply with amount of magnets per full rotation
         calc *= PULSES_PER_REV;
         // Step 3. Calculate frequency of rotation (Rotations per second)
         calc = 1 / calc;
         // Step 4. Calculate RPM from rotation frequency
         const uint32_t currentRPMMeasurement = calc * 60;
-        status.measuredRPM.setFromISR(currentRPMMeasurement);
 
-        // rpmMeasurements[rpmMeasurementsNextIdx] = currentRPMMeasurement;
-        // rpmMeasurementsNextIdx = (rpmMeasurementsNextIdx + 1) % rpmMeasurementsNextIdx;
-
-        // uint32_t avgRPM = 0;
-        // for(uint32_t i = 0; i < rpmMeasurementsSize; i++) {
-        //     avgRPM += rpmMeasurements[i];
-        // }
-        // avgRPM /= rpmMeasurementsSize;
-
-        // // and finally update the signal for the measured RPM
-        // status.measuredRPM.setFromISR(avgRPM);
+        // Average RPM and apply the averaged value to the measuredRPM status signal
+        averaging_filter_put(&measuredRPMFilter, currentRPMMeasurement);
+        status.measuredRPM.setFromISR(averaging_filter_get_avg(&measuredRPMFilter));
     }
 }
 
@@ -180,9 +157,7 @@ void setup() {
     SERIAL_PORT.setRX(1);
     SERIAL_PORT.begin(115200);
 
-    averaging_filter_init(&hallIntervalFilter);
     averaging_filter_init(&measuredRPMFilter);
-    averaging_filter_init(&targetRPMFilter);
 
     // Pin configuration
     ULOG_TRACE("Setup: Configuring pins");

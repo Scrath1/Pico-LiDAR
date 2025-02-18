@@ -28,7 +28,7 @@
 // Defines the value which represents a PWM duty cycle of 100%
 #define PWM_FULL_VALUE (16383)
 // PID control P constant
-#define K_P (0.8)
+#define K_P (1.6)
 // PID control I constant
 #define K_I (1.6)
 // PID control D constant
@@ -54,7 +54,7 @@
 // Number of magnet pulses for a full rotation
 #define PULSES_PER_REV 4
 // Filter size for averaging of measured RPM
-#define RPM_AVERAGING_FILTER_SIZE 8
+#define RPM_AVERAGING_FILTER_SIZE 4
 
 // SERIAL INTERFACE CONFIGURATIONS
 // ==============================================================
