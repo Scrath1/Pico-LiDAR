@@ -231,6 +231,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def plot_handler_update(self):
         self.pull_queue_data()
+        if(len(self._hc_sr04) > 0):
+            self.ui.display_hc_sr04.display(self._hc_sr04[-1].distance)
+        else:
+            self.ui.display_hc_sr04.display(-1)
+        if(len(self._vl53l0x) > 0):
+            self.ui.display_vl53l0x.display(self._vl53l0x[-1].distance)
+        else:
+            self.ui.display_vl53l0x.display(-1)
         self.draw_rpm_plot()
         self.draw_lidar_plot()
 

@@ -126,22 +126,26 @@ void configurePins() {
 
     gpio_init(PIN_SPEED_HALL_SENSOR);
     gpio_set_dir(PIN_SPEED_HALL_SENSOR, GPIO_IN);
+    // Hall effect sensors already have a pull-up resistor soldered to them
     gpio_set_irq_enabled_with_callback(PIN_SPEED_HALL_SENSOR, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true,
                                        gpio_callback);
 
     gpio_init(PIN_ZERO_HALL_SENSOR);
     gpio_set_dir(PIN_ZERO_HALL_SENSOR, GPIO_IN);
-    gpio_set_pulls(PIN_PUSHBTN, true, false);
+    // Hall effect sensors already have a pull-up resistor soldered to them
 
     gpio_init(PIN_PUSHBTN);
+    gpio_set_pulls(PIN_PUSHBTN, true, false);
     gpio_set_dir(PIN_PUSHBTN, GPIO_IN);
     // only first gpio irq to be configured has to use gpio_set_irq_enabled_with_callback
     gpio_set_irq_enabled(PIN_PUSHBTN, GPIO_IRQ_EDGE_FALL, true);
 
     gpio_init(PIN_TRIG);
+    gpio_set_pulls(PIN_TRIG, false, true);
     gpio_set_dir(PIN_TRIG, GPIO_OUT);
 
     gpio_init(PIN_ECHO);
+    gpio_set_pulls(PIN_ECHO, false, true);
     gpio_set_dir(PIN_ECHO, GPIO_IN);
     gpio_set_irq_enabled(PIN_ECHO, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true);
 
