@@ -70,6 +70,8 @@ void hallSensorISR(uint32_t events) {
         averaging_filter_put(&hallIntervalFilter, interval_us);
         uint32_t averageInterval_us = averaging_filter_get_avg(&hallIntervalFilter);
 
+        averageInterval_us = interval_us;
+
         // calculate actual axle rotation speed
         // Note: For some reason trying to replace this manual filtering
         // with the averaging filter used above results in extreme spikes in measurements
@@ -77,18 +79,27 @@ void hallSensorISR(uint32_t events) {
         static uint32_t rpmMeasurements[RPM_AVERAGING_FILTER_SIZE];
         static const uint32_t rpmMeasurementsSize = sizeof(rpmMeasurements) / sizeof(rpmMeasurements[0]);
         static uint32_t rpmMeasurementsNextIdx = 0;
-        uint32_t currentRPMMeasurement = (1 / ((float)averageInterval_us / 1E6)) * 60 * PULSES_PER_REV;
-        rpmMeasurements[rpmMeasurementsNextIdx] = currentRPMMeasurement;
-        rpmMeasurementsNextIdx = (rpmMeasurementsNextIdx + 1) % rpmMeasurementsNextIdx;
+        // Step 1. Calculate pulse interval in seconds instead of microsends
+        float calc = static_cast<float>(averageInterval_us) / 1E6;
+        // Step 2. Multiply with amount of magnets per full rotation
+        calc *= PULSES_PER_REV;
+        // Step 3. Calculate frequency of rotation (Rotations per second)
+        calc = 1 / calc;
+        // Step 4. Calculate RPM from rotation frequency
+        const uint32_t currentRPMMeasurement = calc * 60;
+        status.measuredRPM.setFromISR(currentRPMMeasurement);
 
-        uint32_t avgRPM = 0;
-        for(uint32_t i = 0; i < rpmMeasurementsSize; i++) {
-            avgRPM += rpmMeasurements[i];
-        }
-        avgRPM /= rpmMeasurementsSize;
+        // rpmMeasurements[rpmMeasurementsNextIdx] = currentRPMMeasurement;
+        // rpmMeasurementsNextIdx = (rpmMeasurementsNextIdx + 1) % rpmMeasurementsNextIdx;
 
-        // and finally update the signal for the measured RPM
-        status.measuredRPM.setFromISR(avgRPM);
+        // uint32_t avgRPM = 0;
+        // for(uint32_t i = 0; i < rpmMeasurementsSize; i++) {
+        //     avgRPM += rpmMeasurements[i];
+        // }
+        // avgRPM /= rpmMeasurementsSize;
+
+        // // and finally update the signal for the measured RPM
+        // status.measuredRPM.setFromISR(avgRPM);
     }
 }
 
