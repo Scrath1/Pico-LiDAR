@@ -194,10 +194,17 @@
            <item row="0" column="0" colspan="2">
             <layout class="QFormLayout" name="layout_sensor_control">
              <item row="1" column="1">
-              <widget class="QSpinBox" name="spinBox_vl53l0x_budget"/>
+              <widget class="QSpinBox" name="spinBox_vl53l0x_budget">
+               <property name="maximum">
+                <number>300000</number>
+               </property>
+              </widget>
              </item>
              <item row="2" column="1">
               <widget class="QSpinBox" name="spinBox_angle_offset">
+               <property name="minimum">
+                <number>-359</number>
+               </property>
                <property name="maximum">
                 <number>359</number>
                </property>

@@ -60,7 +60,7 @@ parameter_keys: dict = {_ParameterId.NONE: 'None',
                         _ParameterId.KD: 'K_d',
                         _ParameterId.TARGET_RPM: 'targetRPM',
                         _ParameterId.ENABLE_MOTOR: 'enableMotor',
-                        _ParameterId.VL53L0X_TIME_BUDGET: 'VL53L0X_budget',
+                        _ParameterId.VL53L0X_TIME_BUDGET: 'VL53L0X_Measurement_Budget',
                         _ParameterId.DATAPOINTS_PER_REV: 'scanpoints',
                         _ParameterId.ANGLE_OFFSET: 'angleOffset',
                         _ParameterId.SERIAL_ERROR_COUNTER: 'serialErrorCounter'}

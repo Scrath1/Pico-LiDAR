@@ -139,7 +139,7 @@ bool cmd_get(parameter_id_t id) {
                          runtimeSettings.vl53l0xMeasurementTimingBudget_us.get());
             break;
         case ID_DATAPOINTS_PER_REV:
-            serialPrintf(">%s:%i\n", runtimeSettings.angleOffset.name, runtimeSettings.angleOffset.get());
+            serialPrintf(">%s:%i\n", runtimeSettings.dataPointsPerRev.name, runtimeSettings.dataPointsPerRev.get());
             break;
         case ID_ANGLE_OFFSET:
             serialPrintf(">%s:%i\n", runtimeSettings.angleOffset.name, runtimeSettings.angleOffset.get());
