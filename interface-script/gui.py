@@ -15,7 +15,7 @@ import math
 matplotlib.use("QtAgg")
 import queue
 import argparse
-from misc import Setting, SettingContainer, LidarData, append_rle_encoded, to_lidar_data
+from misc import Setting, LidarData, append_rle_encoded, to_lidar_data
 import interface as it
 
 
@@ -26,11 +26,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     # Setting value holders
     # Widget connections are initialized later
-    settings: dict[SettingContainer]
-    _target_rpm = Setting()
-    _points_per_rev = Setting()
-    _vl53l0x_scantime_budget_us = Setting()
-    _scan_angle_offset = Setting()
+    settings: dict[Setting]
 
     # Plot value holders and corresponding queues for receiving data
     _measured_rpm: list[it.PublishedValue] = list()
@@ -53,55 +49,52 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.settings = {
-            "Kp": SettingContainer(
-                value=Setting(),
+            "Kp": Setting(
                 getter=it.get_kp,
                 setter=it.set_kp,
                 widget=self.ui.doubleSpinBox_kp,
             ),
-            "Ki": SettingContainer(
-                value=Setting(),
+            "Ki": Setting(
                 getter=it.get_ki,
                 setter=it.set_ki,
                 widget=self.ui.doubleSpinBox_ki,
             ),
-            "Kd": SettingContainer(
-                value=Setting(),
+            "Kd": Setting(
                 getter=it.get_kd,
                 setter=it.set_kd,
                 widget=self.ui.doubleSpinBox_kd,
             ),
-            "targetRPM": SettingContainer(
-                value=Setting(),
+            "targetRPM": Setting(
                 getter=it.get_target_rpm,
                 setter=it.set_target_rpm,
                 widget=self.ui.spinBox_tgt_rpm,
             ),
-            "motorOn": SettingContainer(
-                value=Setting(),
+            "motorOn": Setting(
                 getter=it.get_motor_state,
                 setter=None,
                 widget=self.ui.checkBox_motor_on,
             ),  # Setter handled using Qt checkbox handler
-            "PointsPerRev": SettingContainer(
-                value=Setting(),
+            "PointsPerRev": Setting(
                 getter=it.get_datapoints_per_rev,
                 setter=it.set_datapoints_per_rev,
                 widget=self.ui.spinBox_points_per_rev,
             ),
-            "Vl53L0X_Budget": SettingContainer(
-                value=Setting(),
+            "Vl53L0X_Budget": Setting(
                 getter=it.get_vl53l0x_budget,
                 setter=it.set_vl53l0x_budget,
                 widget=self.ui.spinBox_vl53l0x_budget,
             ),
-            "angleOffset": SettingContainer(
-                value=Setting(),
+            "angleOffset": Setting(
                 getter=it.get_angle_offset,
                 setter=it.set_angle_offset,
                 widget=self.ui.spinBox_angle_offset,
             ),
         }
+        # Disable keyboard tracking for spinboxes to allow for enter key to confirm
+        # changes rather than applying a change on every typed character
+        for k, s in self.settings.items():
+            if isinstance(s.widget, QSpinBox) or isinstance(s.widget, QDoubleSpinBox):
+                s.widget.setKeyboardTracking(False)
         self.connect_signals_slots()
         self.subscribe_data_sources()
         self._plot_update_timer.timeout.connect(self.plot_handler_update)
@@ -114,7 +107,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def connect_signals_slots(self):
         self.ui.btn_read_from_device.pressed.connect(self.btn_handler_read_from_device)
-        self.ui.btn_send_to_device.pressed.connect(self.btn_handler_send_to_device)
         self.ui.btn_reset_device.pressed.connect(self.btn_handler_reset_device)
         self.ui.btn_rpm_plot_reset.pressed.connect(self.btn_handler_rpm_plot_reset)
         self.ui.btn_lidar_plot_reset.pressed.connect(self.btn_handler_lidar_plot_reset)
@@ -149,19 +141,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def btn_handler_read_from_device(self):
         for k, s in self.settings.items():
             val = s.getter()
-            s.value.set(val)
-            s.value.acknowledge_change()
+            s.value = val
             if isinstance(s.widget, QSpinBox) or isinstance(s.widget, QDoubleSpinBox):
                 s.widget.setValue(val)
             elif isinstance(s.widget, QCheckBox):
                 s.widget.setChecked(bool(val))
-
-    def btn_handler_send_to_device(self):
-        for k, s in self.settings.items():
-            if s.setter != None:
-                if s.value.was_changed():
-                    s.setter(s.value.get())
-                    s.value.acknowledge_change()
 
     def btn_handler_reset_device(self):
         it.reset_mcu()
@@ -184,38 +168,43 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def checkbox_handler_motor_on(self):
         if self.ui.checkBox_motor_on.checkState() == Qt.CheckState.Checked:
             it.start_motor()
-            print("Motor on")
         else:
             it.stop_motor()
-            print("Motor off")
 
     def spinbox_handler_kp(self):
         w = self.settings["Kp"].widget
-        self.settings["Kp"].value.set(w.value())
+        self.settings["Kp"].value = w.value()
+        it.set_kp(w.value())
 
     def spinbox_handler_ki(self):
         w = self.settings["Ki"].widget
-        self.settings["Ki"].value.set(w.value())
+        self.settings["Ki"].value = w.value()
+        it.set_ki(w.value())
 
     def spinbox_handler_kd(self):
         w = self.settings["Kd"].widget
-        self.settings["Kd"].value.set(w.value())
+        self.settings["Kd"].value = w.value()
+        it.set_kd(w.value())
 
     def spinbox_handler_tgt_rpm(self):
         w = self.settings["targetRPM"].widget
-        self.settings["targetRPM"].value.set(w.value())
+        self.settings["targetRPM"].value = w.value()
+        it.set_target_rpm(w.value())
 
     def spinbox_handler_points_per_rev(self):
         w = self.settings["PointsPerRev"].widget
-        self.settings["PointsPerRev"].value.set(w.value())
+        self.settings["PointsPerRev"].value = w.value()
+        it.set_datapoints_per_rev(w.value())
 
     def spinbox_handler_vl53l0x_budget(self):
         w = self.settings["Vl53L0X_Budget"].widget
-        self.settings["Vl53L0X_Budget"].value.set(w.value())
+        self.settings["Vl53L0X_Budget"].value = w.value()
+        it.set_vl53l0x_budget(w.value())
 
     def spinbox_handler_angle_offset(self):
         w = self.settings["angleOffset"].widget
-        self.settings["angleOffset"].value.set(w.value())
+        self.settings["angleOffset"].value = w.value()
+        it.set_angle_offset(w.value())
 
     def pull_queue_data(self):
         vals = it.get_published_values(self._measured_rpm_queue)
