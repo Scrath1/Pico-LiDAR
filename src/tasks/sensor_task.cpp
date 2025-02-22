@@ -140,7 +140,7 @@ void sensorTask(void* pvParameters) {
         // ToDo: Maybe outsource this step to another point
         uint16_t checkedMaxScanpoints =
             checkMaxScanpointsPerRev(targetRPM.get(), dataPointsPerRev.get(), vl53l0xTimingBudget_us.get() / 1000);
-        if(checkedMaxScanpoints < dataPointsPerRev.get()) {
+        if(checkedMaxScanpoints < dataPointsPerRev.get() || status.sensorTaskInterval_ms == 0) {
             runtimeSettings.dataPointsPerRev.set(checkedMaxScanpoints);
             uint32_t rotationPeriod_ms = rpmToTimePerRev_ms(targetRPM.get());
             uint32_t taskInterval_ms = rotationPeriod_ms / checkedMaxScanpoints;
@@ -154,7 +154,6 @@ void sensorTask(void* pvParameters) {
         // 2. Set callback alarm to reset trigger after its trigger interval
         sleep_us(HC_SR04_TRIG_PULSE_DURATION_US);
         gpio_put(PIN_TRIG, false);
-        // add_alarm_in_us(HC_SR04_TRIG_PULSE_DURATION_US, reset_trig_pin, NULL, true);
 
         // 2. Read the VL53L0X laser sensor
         uint16_t vl53l0x_range_mm = 0;
