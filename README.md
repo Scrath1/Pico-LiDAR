@@ -1,7 +1,9 @@
 # Pico-LiDAR
 The goal of this project is to build a simple LiDAR sensor using hobbyist components
 such as the Raspberry Pi Pico microcontroller, VL53L0X Time-of-Flight laser sensor
-and the the HC-SR04P ultrasonic sensor.
+and the HC-SR04P ultrasonic sensor.
+
+![](./docs/images/lidar_module.jpg)
 
 ## Bill of Materials (BOM)
 <details>
@@ -87,6 +89,8 @@ will be unable to flash.**
 - The J-Link 5V-Supply pin is controlled using the J-Link commander utility.
   Use `power on` to turn it on or `power on perm` to make it stay on even after
   reconnecting the probe.
+
+After setting up the J-Link you can flash the project using platformio.
 
 ### Installing dependencies for python script
 To install the dependencies in a Python venv use the following commands
