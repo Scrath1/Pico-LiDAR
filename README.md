@@ -9,11 +9,11 @@ and the the HC-SR04P ultrasonic sensor.
 
 - 608Z bearing
 - generic 6 wire slip ring with 12.5mm diameter
-- 3x M3x8 bolts for mounting the slip ring
 - 7x M4x10 bolts (can be shorter)
 - 6x M3x16 countersunk bolts (can be shorter) for mounting the dome top cover
   and the base bottom plate to their respective bodies.
-- 4-6x M3x4 bolts for mounting the L298N to the base plate. There are 4 screw holes
+- 7-8x M3x4 bolts for mounting the L298N and XL6009 to the base plate as well as the
+  slipring to the axis mount.
   but you don't really need to use them all. The remaining screws are for the XL6009.
 - 4x M2x6 bolts for mounting the perfboard
 - 2-4x M2x4 bolts for mounting the Pi Pico
@@ -56,21 +56,49 @@ and the the HC-SR04P ultrasonic sensor.
 </details>
 
 ## Assembly instruction
-ToDo
-### Required Tools
-- Soldering Iron
-- Heatgun
-- Screwdrivers
-
-### Mounting the motor
-Depending on which DC motor you get the mounting holes on the corresponding
-3D printed bracket may not line up. In that case you will need to edit the model
-yourself or drill fitting holes in the existing part.
-
-The 3D model is located in the [model](./model/) directory as a step file.
+Refer to the [Assembly instructions document](./docs/assembly.md)
 
 ## Setup
-### Installing dependencies
+### Flashing using J-Link (SWD Mode)
+**By default the project is configured to use a J-Link Debug Probe in SWD mode.
+To use a Pico Debug Probe instead, switch out any reference to `jlink` in the `platformio.ini`
+file for `raspberrypi-swd`. Using USB for flashing is not recommended since the USB port
+will be inaccessible inside the case therefore preventing flashing new firmware later.**
+
+Wire up the J-Link probe according to the following table.
+| J-Link Pin | J-Link Pin Name | Pico Pin | Pico Pin Name  |
+| ---------- | --------------- | -------- | -------------- |
+| 1          | VTref           | 37       | 3V3 (OUT)      |
+| 4          | GND             | 38       | GND            |
+| 5          | Tx (out)        | 2        | GP1 / UART0_RX |
+| 7          | SWDIO           |          | SWDIO          |
+| 9          | SWCLK           |          | SWCLK          |
+| 15         | nRESET          | 30       | RUN            |
+| 17         | Rx (in)         | 1        | GP0 / UART0_TX |
+| 19         | 5V-Supply       | 39       | VSYS           |
+
+**Warning: The 5V supply of the J-Link is insufficient to power the power the motor
+and the pico. Connect a different power supply for the motor or the probe
+will be unable to flash.**
+
+**J-Link configuration:**
+- The J-Link UART port has to be enable using the J-Link configurator utility
+  if you have not done so already.
+- The J-Link 5V-Supply pin is controlled using the J-Link commander utility.
+  Use `power on` to turn it on or `power on perm` to make it stay on even after
+  reconnecting the probe.
+
+### Installing dependencies for python script
+To install the dependencies in a Python venv use the following commands
+1. Create virtual environment
+   > python -m venv .venv
+2. Activate venv<br>
+    Run the activation script in `.venv/Scripts/`corresponding to your platform
+    from your current terminal. On windows that is either `activate.bat` or
+    `Activate.ps1` depending on whether you use the command line or powershell.
+    On linux use `activate` without any file extension.
+3. Install dependencies from requirements.txt
+   > pip install -r interface-script/requirements.txt
 
 ### Connections
 Commands and communication from and to the LiDAR module are done using UART0

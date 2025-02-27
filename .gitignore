@@ -11,3 +11,4 @@ circuit-diagram/circuit-diagram-backups/
 interface-script/.venv
 interface-script/__pycache__/
 args.txt
+*.lck
