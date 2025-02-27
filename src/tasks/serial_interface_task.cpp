@@ -10,7 +10,6 @@
 #include "serial_print.h"
 #include "macros.h"
 
-#define CMD_START_BYTE (0b01010101)
 #define TARGET_BYTES_START_INDEX (2)
 #define VALUE_BYTES_START_INDEX (6)
 
@@ -59,7 +58,7 @@ void serialInterfaceTask(void* pvParameters) {
             switch(rxCmdState) {
                 default:
                 case RX_IDLE:
-                    if(CMD_START_BYTE == (uint8_t)c){
+                    if(COMMAND_START_BYTE == (uint8_t)c){
                         rxCmdState = RX_CMD;
                         cmdStartTimestamp_ms = pdTICKS_TO_MS(xTaskGetTickCount());
                         ULOG_DEBUG("%s: Cmd start byte detected", TASK_LOG_NAME);

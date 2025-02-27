@@ -11,15 +11,15 @@
  * Bytes are ordered MSB to LSB
  *
  * Table generated using https://ozh.github.io/ascii-tables/
- * +-------------+-------------+-------------+
- * | Instruction | Variable ID | Value       |
- * +-------------+-------------+-------------+
- * | 8bit        | 32bit       | 32bit       |
- * +-------------+-------------+-------------+
+ * +------------+-------------+-------------+-------+
+ * | Start byte | Instruction | Variable ID | Value |
+ * +------------+-------------+-------------+-------+
+ * | 8bit       | 8bit        | 32bit       | 32bit |
+ * +------------+-------------+-------------+-------+
  */
 
 #define COMMAND_FRAME_SIZE (1 + 4 + 4 + 1)
-
+#define COMMAND_START_BYTE (0b01010101)
 typedef enum { CMD_NONE = 0, CMD_SET = 1, CMD_GET = 2, CMD_RESET = 3} cmd_instruction_t;
 
 typedef enum {

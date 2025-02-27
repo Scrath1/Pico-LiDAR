@@ -24,13 +24,13 @@
 // Maximum target speed for the motor
 #define MAX_TARGET_RPM (1000)
 // Default motor rotation target speed
-#define MOTOR_TARGET_SPEED (200)
+#define MOTOR_TARGET_SPEED (120)
 // Defines the value which represents a PWM duty cycle of 100%
-#define PWM_FULL_VALUE (1024)
+#define PWM_FULL_VALUE (16383)
 // PID control P constant
-#define K_P (0.05)
+#define K_P (1.6)
 // PID control I constant
-#define K_I (0.1)
+#define K_I (1.6)
 // PID control D constant
 #define K_D (0)
 // Interval with which the PID control loop is run in milliseconds
@@ -38,12 +38,12 @@
 // Minimum PID controller output value
 #define PID_MIN_OUT (0)
 // Maximum PID controller output value
-#define PID_MAX_OUT (MAX_TARGET_RPM)
-// Maximum PID constant value for error checking purposes
+#define PID_MAX_OUT (PWM_FULL_VALUE)
+// Maximum PID constant value for very basic error checking purposes
 #define PID_CONSTANT_MAX (10)
 // Number of PID intervals over which the measured RPM has to be relatively
 // constant before being declared stable
-#define MEASURED_RPM_STABILITY_INTERVAL_COUNT (5)
+#define MEASURED_RPM_STABILITY_INTERVAL_COUNT (25)
 // the +- range by which the measured RPM may differ from the
 // target RPM over MEASURED_RPM_STABILITY_INTERVAL_COUNT PID control
 // intervals for the speed to be considered stable
@@ -54,7 +54,7 @@
 // Number of magnet pulses for a full rotation
 #define PULSES_PER_REV 4
 // Filter size for averaging of measured RPM
-#define RPM_AVERAGING_FILTER_SIZE 8
+#define RPM_AVERAGING_FILTER_SIZE 4
 
 // SERIAL INTERFACE CONFIGURATIONS
 // ==============================================================
@@ -91,7 +91,12 @@
 // required for getting the sensor readings. Increase if you get
 // warnings about timing violations
 #define SENSOR_SCAN_EXTRA_TIME_BUDGET_MS (12)
+// Default offset by which to rotate any angle value
 #define DEFAULT_ANGLE_OFFSET (-45)
+// Distance of the HC-SR04 sensor from the the rotation center
+#define HC_SR04_CENTER_OFFSET_MM (35)
+// Distance of the VL53L0X sensor from the the rotation center
+#define VL53L0X_CENTER_OFFSET_MM (44)
 
 // SIGNAL AGE
 // ==============================================================

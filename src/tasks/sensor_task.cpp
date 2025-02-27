@@ -140,7 +140,7 @@ void sensorTask(void* pvParameters) {
         // ToDo: Maybe outsource this step to another point
         uint16_t checkedMaxScanpoints =
             checkMaxScanpointsPerRev(targetRPM.get(), dataPointsPerRev.get(), vl53l0xTimingBudget_us.get() / 1000);
-        if(checkedMaxScanpoints < dataPointsPerRev.get()) {
+        if(checkedMaxScanpoints < dataPointsPerRev.get() || status.sensorTaskInterval_ms == 0) {
             runtimeSettings.dataPointsPerRev.set(checkedMaxScanpoints);
             uint32_t rotationPeriod_ms = rpmToTimePerRev_ms(targetRPM.get());
             uint32_t taskInterval_ms = rotationPeriod_ms / checkedMaxScanpoints;
@@ -154,11 +154,10 @@ void sensorTask(void* pvParameters) {
         // 2. Set callback alarm to reset trigger after its trigger interval
         sleep_us(HC_SR04_TRIG_PULSE_DURATION_US);
         gpio_put(PIN_TRIG, false);
-        // add_alarm_in_us(HC_SR04_TRIG_PULSE_DURATION_US, reset_trig_pin, NULL, true);
 
         // 2. Read the VL53L0X laser sensor
         uint16_t vl53l0x_range_mm = 0;
-        if(vl53l0xInitialized) vl53l0x_range_mm = vl53l0x.readRangeSingleMillimeters();
+        if(vl53l0xInitialized) vl53l0x_range_mm = vl53l0x.readRangeSingleMillimeters() + VL53L0X_CENTER_OFFSET_MM;
 
         // 3. Wait for result of HC-SR04
         uint32_t hc_sr04_duration_us = 0;
@@ -171,7 +170,7 @@ void sensorTask(void* pvParameters) {
             // don't have a temperature sensor to compensate for that
             const float v_sound_cm_us = 0.0001 * SPEED_OF_SOUND_MPS;
             float d_cm = v_sound_cm_us * hc_sr04_duration_us / 2;
-            hc_sr04_range_mm = static_cast<uint32_t>(d_cm * 10);
+            hc_sr04_range_mm = static_cast<uint32_t>(d_cm * 10) + HC_SR04_CENTER_OFFSET_MM;
         }
         // get angle of measurement
         int32_t currentAngle = -1;
