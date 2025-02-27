@@ -42,22 +42,23 @@ def _send_args(args):
         it.set_vl53l0x_budget(args.timebudget_vl53l0x)
 
 def main():
-    parser.add_argument('-r', '--reset', action='store_true', help="Sends a reset command before anything else happens")
     parser.add_argument('-f', '--file', action='store', type=str, help="Reads arguments from file instead of the CLI")
-    parser.add_argument('-b', '--baud', action='store', type=int, default=115200, help="Baudrate in case of a serial connection")
-    interface = parser.add_mutually_exclusive_group(required=True)
-    interface.add_argument('-p', '--port', action='store', type=str, help="Serial port")
-    interface.add_argument('-d', '--destination', action='store', type=str, help="Hostname or IP-Address of destination")
-    settingArgs = parser.add_argument_group("Parameters")
-    settingArgs.add_argument('-kp', action='store', type=float, help="Overwrite PID K_p parameter")
-    settingArgs.add_argument('-ki', action='store', type=float, help="Overwrite PID K_i parameter")
-    settingArgs.add_argument('-kd', action='store', type=float, help="Overwrite PID K_d parameter")
-    settingArgs.add_argument('-rpm', action='store', type=int, help="LiDAR dome rotation speed")
-    settingArgs.add_argument('-o', '--offset-angle', action='store', type=int, help="Offsets the angle of all measurements")
-    settingArgs.add_argument('-s', '--scanpoints', action='store', type=int, help="Number of datapoints to measure per rotation")
-    settingArgs.add_argument('-tv', '--timebudget-vl53l0x', action='store', type=int, help="Time in us the VL53L0X has to get a measurement. This impacts accuracy")
-    settingArgs.add_argument('-ng', "--no-gui", action='store_true', default=False, help="Open GUI for tuning PID parameters")
-    plotArgs = parser.add_argument_group("Plotting")
+    comArgs = parser.add_argument_group("Communication Parameters")
+    comArgs.add_argument('-b', '--baud', action='store', type=int, default=115200, help="Baudrate in case of a serial connection")
+    comInterfaceArgs = comArgs.add_mutually_exclusive_group(required=True)
+    comInterfaceArgs.add_argument('-p', '--port', action='store', type=str, help="Serial port. Mutually exclusive to --destination")
+    comInterfaceArgs.add_argument('-d', '--destination', action='store', type=str, help="Hostname or IP-Address of destination. Mutually exclusive to --port")
+    mcuArgs = parser.add_argument_group("MCU Parameters")
+    mcuArgs.add_argument('-r', '--reset', action='store_true', help="Sends a reset command before anything else happens")
+    mcuArgs.add_argument('-kp', action='store', type=float, help="Overwrite PID K_p parameter")
+    mcuArgs.add_argument('-ki', action='store', type=float, help="Overwrite PID K_i parameter")
+    mcuArgs.add_argument('-kd', action='store', type=float, help="Overwrite PID K_d parameter")
+    mcuArgs.add_argument('-rpm', action='store', type=int, help="LiDAR dome rotation speed")
+    mcuArgs.add_argument('-o', '--offset-angle', action='store', type=int, help="Offsets the angle of all measurements")
+    mcuArgs.add_argument('-s', '--scanpoints', action='store', type=int, help="Number of datapoints to measure per rotation")
+    mcuArgs.add_argument('-tv', '--timebudget-vl53l0x', action='store', type=int, help="Time in us the VL53L0X has to get a measurement. This impacts accuracy")
+    mcuArgs.add_argument('-ng', "--no-gui", action='store_true', default=False, help="Disable GUI")
+    plotArgs = parser.add_argument_group("GUI Plotting")
     plotArgs.add_argument('-a', '--age', action='store', type=int, default=1000, help="Maximum age in ms of points in lidar plot. Set to 0 to keep all measurements")
 
     # Setup signal handler for Ctrl+C
@@ -79,7 +80,6 @@ def main():
         exit()
     
     if(args.reset):
-        print("Resetting MCU")
         it.reset_mcu()
         time.sleep(0.1)
 
